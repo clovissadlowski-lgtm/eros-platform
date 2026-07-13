@@ -6,12 +6,12 @@ Documentação de inteligência artificial do Higeia.
 
 - `HIGEIA-KNOWLEDGE-MODEL-v0.1.md`
 - `HIGEIA-HIE-ARCHITECTURE-v0.1.md`
+- `HIGEIA-MEMORY-MODEL-v0.1.md`
 
 ## Próximos documentos
 
-- `HIGEIA-MEMORY-MODEL-v0.1.md`
-- `HIGEIA-SAFETY-EVALUATION-v0.1.md`
+- `HIGEIA-AI-SAFETY-EVALUATION-v0.1.md`
 
 ## Regra
 
-O HIE deve ser modular, auditável, explicável, seguro e independente de um único provedor de IA.
+A memória deve ser seletiva, temporal, auditável, corrigível, consentida e proporcional à finalidade.
