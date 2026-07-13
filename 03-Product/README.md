@@ -8,11 +8,8 @@ Documentação de produto do Higeia.
 - `HIGEIA-USER-JOURNEY-v0.1.md`
 - `HIGEIA-SCREEN-MAP-v0.1.md`
 - `HIGEIA-ASSESSMENT-SPEC-v0.1.md`
-
-## Próximos documentos
-
 - `HIGEIA-PERSONAL-PROFILE-SPEC-v0.1.md`
 
 ## Regra
 
-A anamnese deve permanecer coerente com o PRD, a jornada, o mapa de telas e os limites de segurança.
+O Perfil de Inteligência Pessoal deve permanecer coerente com a anamnese, o PRD, a jornada e os limites de segurança.
