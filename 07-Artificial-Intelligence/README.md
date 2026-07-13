@@ -7,11 +7,8 @@ Documentação de inteligência artificial do Higeia.
 - `HIGEIA-KNOWLEDGE-MODEL-v0.1.md`
 - `HIGEIA-HIE-ARCHITECTURE-v0.1.md`
 - `HIGEIA-MEMORY-MODEL-v0.1.md`
-
-## Próximos documentos
-
 - `HIGEIA-AI-SAFETY-EVALUATION-v0.1.md`
 
 ## Regra
 
-A memória deve ser seletiva, temporal, auditável, corrigível, consentida e proporcional à finalidade.
+Nenhuma versão da IA deve ser liberada sem testes, rastreabilidade, critérios de bloqueio, revisão de risco e capacidade de rollback.
