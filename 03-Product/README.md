@@ -6,13 +6,13 @@ Documentação de produto do Higeia.
 
 - `HIGEIA-MVP-PRD-v0.1.md`
 - `HIGEIA-USER-JOURNEY-v0.1.md`
+- `HIGEIA-SCREEN-MAP-v0.1.md`
 
 ## Próximos documentos
 
-- `HIGEIA-SCREEN-MAP-v0.1.md`
 - `HIGEIA-ASSESSMENT-SPEC-v0.1.md`
 - `HIGEIA-PERSONAL-PROFILE-SPEC-v0.1.md`
 
 ## Regra
 
-A jornada do usuário deve permanecer coerente com o PRD e com as decisões fundadoras.
+As telas devem permanecer coerentes com o PRD, a jornada e as decisões fundadoras.
