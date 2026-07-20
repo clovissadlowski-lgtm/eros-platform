@@ -1,0 +1,13 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies and build
+node_modules/
+.next/
+dist/
+coverage/
+
+# Local evidence that may contain machine data
+evidence/stack-poc/private/
