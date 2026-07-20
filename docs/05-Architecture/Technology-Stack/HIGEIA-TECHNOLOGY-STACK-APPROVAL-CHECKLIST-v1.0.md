@@ -1,0 +1,22 @@
+# Higeia — Technology Stack Approval Checklist
+
+- [ ] TypeScript approved.
+- [ ] Next.js approved.
+- [ ] NestJS approved.
+- [ ] Modular monolith approved.
+- [ ] PostgreSQL approved.
+- [ ] Prisma approved conditionally or alternative selected.
+- [ ] AWS approved.
+- [ ] sa-east-1 approved.
+- [ ] Cognito approved.
+- [ ] ECS Fargate approved.
+- [ ] S3 approved.
+- [ ] OpenTelemetry and CloudWatch approved.
+- [ ] GitHub Actions approved.
+- [ ] Terraform approved.
+- [ ] OpenAI approved only as initial provider.
+- [ ] AI Provider Adapter mandatory.
+- [ ] PoC required.
+- [ ] Cost review required.
+- [ ] Security review required.
+- [ ] Technical owner assigned.
