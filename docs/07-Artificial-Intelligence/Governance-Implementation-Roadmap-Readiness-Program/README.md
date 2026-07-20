@@ -1,0 +1,22 @@
+# Governance Implementation Roadmap and Readiness Program
+
+Esta pasta converte a documentação de governança do Higeia em um programa executável.
+
+## Documentos
+
+- `HIGEIA-AI-GOVERNANCE-IMPLEMENTATION-ROADMAP-READINESS-PROGRAM-v0.1.md`
+- `HIGEIA-AI-GOVERNANCE-IMPLEMENTATION-ROADMAP-v0.1.md`
+- `HIGEIA-PHASE-EXIT-CRITERIA-MATRIX-v0.1.md`
+- `HIGEIA-GOVERNANCE-IMPLEMENTATION-BACKLOG-v0.1.md`
+- `HIGEIA-GOVERNANCE-IMPLEMENTATION-DEPENDENCY-MAP-v0.1.md`
+- `HIGEIA-ALPHA-READINESS-MATRIX-v0.1.md`
+- `HIGEIA-ALPHA-READINESS-BLOCKER-REGISTER-v0.1.md`
+- `HIGEIA-SPRINT-0-GOVERNANCE-ENABLEMENT-CHECKLIST-v0.1.md`
+- `HIGEIA-ALPHA-VERIFICATION-EVIDENCE-PLAN-v0.1.md`
+- `HIGEIA-CONTROLLED-ALPHA-READINESS-DECISION-RECORD-v0.1.md`
+- `HIGEIA-GOVERNANCE-IMPLEMENTATION-PROGRESS-REPORT-v0.1.md`
+- `HIGEIA-POST-ALPHA-REVIEW-CONTINUATION-DECISION-v0.1.md`
+
+## Regra
+
+Uma tarefa não está concluída porque um documento existe. Deve haver entrega, critério de aceite, evidência, revisão e atualização dos registros mestres.
