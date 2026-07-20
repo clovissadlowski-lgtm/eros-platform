@@ -1,17 +1,18 @@
 # 06 — Engineering
 
-Documentação de engenharia do Higeia.
+Esta pasta concentra as normas e processos de engenharia do Higeia.
 
 ## Documentos atuais
 
-- `HIGEIA-ENGINEERING-STANDARDS-v0.1.md`
+- `HIGEIA-ENGINEERING-HANDBOOK-v1.0.md`
+- `HIGEIA-PULL-REQUEST-CHECKLIST-v1.0.md`
 
-## Próximos documentos
+## Uso
 
-- `HIGEIA-TESTING-STRATEGY-v0.1.md`
-- `HIGEIA-RELEASE-PROCESS-v0.1.md`
-- `HIGEIA-SECURE-CODING-v0.1.md`
+O Engineering Handbook define o padrão oficial de desenvolvimento.
+
+O checklist de Pull Request deve ser usado antes de qualquer merge.
 
 ## Regra
 
-Código só é considerado pronto quando atende os critérios funcionais, técnicos, de segurança, observabilidade, documentação e rollback.
+Código, testes, segurança, observabilidade e documentação fazem parte da mesma entrega.
