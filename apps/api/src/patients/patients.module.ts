@@ -1,10 +1,18 @@
 ﻿import { Module } from '@nestjs/common';
-import { PatientsController } from './patients.controller';
-import { PatientsService } from './patients.service';
+import { PatientsService } from './application/services/patients.service';
+import { PatientsRepository } from './domain/repositories/patients.repository';
+import { InMemoryPatientsRepository } from './infrastructure/repositories/in-memory-patients.repository';
+import { PatientsController } from './presentation/controllers/patients.controller';
 
 @Module({
   controllers: [PatientsController],
-  providers: [PatientsService],
+  providers: [
+    PatientsService,
+    {
+      provide: PatientsRepository,
+      useClass: InMemoryPatientsRepository,
+    },
+  ],
   exports: [PatientsService],
 })
 export class PatientsModule {}

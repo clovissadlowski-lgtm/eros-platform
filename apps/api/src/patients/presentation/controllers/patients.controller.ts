@@ -6,28 +6,34 @@
   Param,
   Post,
 } from '@nestjs/common';
-import { CreatePatientDto } from './dto/create-patient.dto';
-import { PatientNotFoundError } from './errors/patient-not-found.error';
-import { PatientsService } from './patients.service';
+import { PatientsService } from '../../application/services/patients.service';
+import { PatientNotFoundError } from '../../domain/errors/patient-not-found.error';
+import { CreatePatientDto } from '../dto/create-patient.dto';
 
 @Controller('patients')
 export class PatientsController {
-  constructor(private readonly patientsService: PatientsService) {}
+  constructor(
+    private readonly patientsService: PatientsService,
+  ) {}
 
   @Post()
-  create(@Body() dto: CreatePatientDto) {
+  async create(@Body() dto: CreatePatientDto) {
     return this.patientsService.createPatient(dto);
   }
 
   @Get()
-  list() {
+  async list() {
     return this.patientsService.listPatients();
   }
 
   @Get(':patientId')
-  getById(@Param('patientId') patientId: string) {
+  async getById(
+    @Param('patientId') patientId: string,
+  ) {
     try {
-      return this.patientsService.getPatientById(patientId);
+      return await this.patientsService.getPatientById(
+        patientId,
+      );
     } catch (error: unknown) {
       if (error instanceof PatientNotFoundError) {
         throw new NotFoundException({
