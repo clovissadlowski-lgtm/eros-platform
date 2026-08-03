@@ -3,11 +3,11 @@ import {
   Controller,
   Get,
   Header,
-  Headers,
   HttpCode,
   HttpStatus,
   Ip,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -19,18 +19,16 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import type { Request } from 'express';
 
 import { MembershipRole } from '../../../users/domain/entities/membership.entity';
 
 import { LoginService } from '../../application/services/login.service';
 import type { LoginResult } from '../../application/services/login.service';
-
 import { LogoutAllSessionsService } from '../../application/services/logout-all-sessions.service';
 import { LogoutSessionService } from '../../application/services/logout-session.service';
-
 import { RefreshSessionService } from '../../application/services/refresh-session.service';
 import type { RefreshSessionResult } from '../../application/services/refresh-session.service';
-
 import { SelectOrganizationService } from '../../application/services/select-organization.service';
 import type { SelectOrganizationResult } from '../../application/services/select-organization.service';
 
@@ -38,11 +36,9 @@ import type { AuthenticatedRequestContext } from '../../domain/authentication/au
 
 import { CurrentUser } from '../decorators/current-user.decorator';
 import { Roles } from '../decorators/roles.decorator';
-
 import { LoginDto } from '../dtos/login.dto';
 import { RefreshTokenDto } from '../dtos/refresh-token.dto';
 import { SelectOrganizationDto } from '../dtos/select-organization.dto';
-
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { RolesGuard } from '../guards/roles.guard';
 
@@ -63,7 +59,7 @@ export class AccessController {
   @ApiOperation({
     summary: 'Autenticar usuário',
     description:
-      'Valida e-mail e senha, cria uma sessão e retorna access token e refresh token. O token inicial ainda pode não conter o contexto de uma organização.',
+      'Valida o e-mail e a senha, cria uma sessão e retorna um access token e um refresh token. O token inicial ainda pode não conter contexto organizacional.',
   })
   @ApiOkResponse({
     description:
@@ -74,16 +70,24 @@ export class AccessController {
       'E-mail ou senha inválidos, usuário bloqueado ou usuário inativo.',
   })
   async login(
-    @Body() input: LoginDto,
-    @Ip() ipAddress: string,
-    @Headers('user-agent')
-    userAgent?: string,
+    @Body()
+    input: LoginDto,
+    @Ip()
+    ipAddress: string,
+    @Req()
+    request: Request,
   ): Promise<LoginResult> {
+    const userAgent =
+      request.headers['user-agent'];
+
     return this.loginService.execute({
       email: input.email,
       plainPassword: input.password,
       ipAddress,
-      userAgent: userAgent ?? null,
+      userAgent:
+        typeof userAgent === 'string'
+          ? userAgent
+          : null,
     });
   }
 
@@ -93,18 +97,19 @@ export class AccessController {
   @ApiOperation({
     summary: 'Renovar sessão',
     description:
-      'Valida o refresh token atual, faz a rotação das credenciais da sessão e retorna novos tokens.',
+      'Valida o refresh token atual, realiza a rotação das credenciais da sessão e retorna novos tokens.',
   })
   @ApiOkResponse({
     description:
-      'Sessão renovada e novos tokens emitidos.',
+      'Sessão renovada e novos tokens emitidos com sucesso.',
   })
   @ApiUnauthorizedResponse({
     description:
       'Refresh token inválido, expirado, revogado ou já utilizado.',
   })
   async refresh(
-    @Body() input: RefreshTokenDto,
+    @Body()
+    input: RefreshTokenDto,
   ): Promise<RefreshSessionResult> {
     return this.refreshSessionService.execute({
       refreshToken: input.refreshToken,
@@ -128,7 +133,8 @@ export class AccessController {
       'Refresh token inválido ou sessão não reconhecida.',
   })
   async logout(
-    @Body() input: RefreshTokenDto,
+    @Body()
+    input: RefreshTokenDto,
   ): Promise<void> {
     await this.logoutSessionService.execute({
       refreshToken: input.refreshToken,
@@ -147,7 +153,7 @@ export class AccessController {
   })
   @ApiNoContentResponse({
     description:
-      'Todas as sessões foram encerradas.',
+      'Todas as sessões foram encerradas com sucesso.',
   })
   @ApiUnauthorizedResponse({
     description:
@@ -170,11 +176,11 @@ export class AccessController {
   @ApiOperation({
     summary: 'Selecionar organização',
     description:
-      'Valida a membership do usuário e emite um novo access token com organizationId, membershipId e role.',
+      'Valida a associação do usuário com a organização e emite um novo access token contendo organizationId, membershipId e role.',
   })
   @ApiOkResponse({
     description:
-      'Organização selecionada e token contextualizado emitido.',
+      'Organização selecionada e token contextualizado emitido com sucesso.',
   })
   @ApiUnauthorizedResponse({
     description:
@@ -182,10 +188,11 @@ export class AccessController {
   })
   @ApiForbiddenResponse({
     description:
-      'O usuário não possui membership ativa na organização informada.',
+      'O usuário não possui uma associação ativa com a organização informada.',
   })
   async selectOrganization(
-    @Body() input: SelectOrganizationDto,
+    @Body()
+    input: SelectOrganizationDto,
     @CurrentUser()
     currentUser: AuthenticatedRequestContext,
   ): Promise<SelectOrganizationResult> {
@@ -193,7 +200,8 @@ export class AccessController {
       userId: currentUser.userId,
       sessionId: currentUser.sessionId,
       email: currentUser.email,
-      organizationId: input.organizationId,
+      organizationId:
+        input.organizationId,
     });
   }
 
@@ -204,7 +212,7 @@ export class AccessController {
   @ApiOperation({
     summary: 'Consultar contexto autenticado',
     description:
-      'Retorna os dados extraídos do access token atual, incluindo o contexto organizacional quando já selecionado.',
+      'Retorna os dados extraídos do access token atual, incluindo o contexto organizacional quando uma organização já foi selecionada.',
   })
   @ApiOkResponse({
     description:
@@ -233,7 +241,8 @@ export class AccessController {
   @Header('Cache-Control', 'no-store')
   @ApiBearerAuth('access-token')
   @ApiOperation({
-    summary: 'Validar acesso administrativo',
+    summary:
+      'Validar acesso administrativo',
     description:
       'Confirma que o usuário possui contexto organizacional e função OWNER ou ADMIN.',
   })
