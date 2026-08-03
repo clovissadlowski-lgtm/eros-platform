@@ -1,0 +1,29 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: higeia-postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: higeia
+      POSTGRES_PASSWORD: higeia
+      POSTGRES_DB: higeia
+
+    ports:
+      - "127.0.0.1:5432:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U higeia -d higeia",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

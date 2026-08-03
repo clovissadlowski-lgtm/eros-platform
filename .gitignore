@@ -10,3 +10,45 @@ coverage/
 *.log
 .DS_Store
 Thumbs.db
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+**/dist/
+coverage/
+**/coverage/
+*.tsbuildinfo
+
+# Environment files
+.env
+.env.*
+!.env.example
+!.env.test.example
+
+# Logs and temporary diagnostics
+*.log
+*-error.txt
+integration-error.txt
+prisma-patients.integration.txt
+professional-schedules-test-error.txt
+estrutura.txt
+git-status-auditoria.txt
+
+# IDE and operating system
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local AI and agent tooling
+.agents/
+**/.agents/
+.claude/
+**/.claude/
+.windsurf/
+**/.windsurf/
+# Local skills/tooling manifests
+skills-lock.json
+**/skills-lock.json

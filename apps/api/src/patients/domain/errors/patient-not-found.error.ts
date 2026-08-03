@@ -1,8 +1,13 @@
-﻿export class PatientNotFoundError extends Error {
-  readonly code = 'PATIENT_NOT_FOUND';
+﻿import { DomainError } from '../../../common/errors/domain-error';
 
+export class PatientNotFoundError extends DomainError {
   constructor() {
-    super('Patient not found.');
+    super({
+      code: 'PATIENT_NOT_FOUND',
+      message: 'Patient not found.',
+      statusCode: 404,
+    });
+
     this.name = 'PatientNotFoundError';
   }
 }

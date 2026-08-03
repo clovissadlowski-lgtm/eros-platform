@@ -2,47 +2,123 @@
   Body,
   Controller,
   Get,
-  NotFoundException,
   Param,
+  Patch,
   Post,
+  UseGuards,
 } from '@nestjs/common';
+
+import type { AuthenticatedRequestContext } from '../../../access/domain/authentication/authenticated-request-context';
+import { CurrentUser } from '../../../access/presentation/decorators/current-user.decorator';
+import { Roles } from '../../../access/presentation/decorators/roles.decorator';
+import { JwtAuthGuard } from '../../../access/presentation/guards/jwt-auth.guard';
+import { RolesGuard } from '../../../access/presentation/guards/roles.guard';
+import { MembershipRole } from '../../../users/domain/entities/membership.entity';
 import { PatientsService } from '../../application/services/patients.service';
-import { PatientNotFoundError } from '../../domain/errors/patient-not-found.error';
 import { CreatePatientDto } from '../dto/create-patient.dto';
+import { UpdatePatientStatusDto } from '../dto/update-patient-status.dto';
+import { UpdatePatientDto } from '../dto/update-patient.dto';
 
 @Controller('patients')
+@UseGuards(
+  JwtAuthGuard,
+  RolesGuard,
+)
 export class PatientsController {
   constructor(
     private readonly patientsService: PatientsService,
   ) {}
 
   @Post()
-  async create(@Body() dto: CreatePatientDto) {
-    return this.patientsService.createPatient(dto);
+  @Roles(
+    MembershipRole.OWNER,
+    MembershipRole.ADMIN,
+    MembershipRole.NUTRITIONIST,
+  )
+  create(
+    @Body() dto: CreatePatientDto,
+    @CurrentUser()
+    currentUser: AuthenticatedRequestContext,
+  ) {
+    return this.patientsService.createPatient(
+      dto,
+      currentUser.organizationId!,
+    );
   }
 
   @Get()
-  async list() {
-    return this.patientsService.listPatients();
+  @Roles(
+    MembershipRole.OWNER,
+    MembershipRole.ADMIN,
+    MembershipRole.NUTRITIONIST,
+    MembershipRole.ASSISTANT,
+  )
+  list(
+    @CurrentUser()
+    currentUser: AuthenticatedRequestContext,
+  ) {
+    return this.patientsService.listPatients(
+      currentUser.organizationId!,
+    );
   }
 
   @Get(':patientId')
-  async getById(
-    @Param('patientId') patientId: string,
+  @Roles(
+    MembershipRole.OWNER,
+    MembershipRole.ADMIN,
+    MembershipRole.NUTRITIONIST,
+    MembershipRole.ASSISTANT,
+  )
+  getById(
+    @Param('patientId')
+    patientId: string,
+    @CurrentUser()
+    currentUser: AuthenticatedRequestContext,
   ) {
-    try {
-      return await this.patientsService.getPatientById(
-        patientId,
-      );
-    } catch (error: unknown) {
-      if (error instanceof PatientNotFoundError) {
-        throw new NotFoundException({
-          code: error.code,
-          message: error.message,
-        });
-      }
+    return this.patientsService.getPatientById(
+      patientId,
+      currentUser.organizationId!,
+    );
+  }
 
-      throw error;
-    }
+  @Patch(':patientId')
+  @Roles(
+    MembershipRole.OWNER,
+    MembershipRole.ADMIN,
+    MembershipRole.NUTRITIONIST,
+  )
+  update(
+    @Param('patientId')
+    patientId: string,
+    @Body()
+    dto: UpdatePatientDto,
+    @CurrentUser()
+    currentUser: AuthenticatedRequestContext,
+  ) {
+    return this.patientsService.updatePatient(
+      patientId,
+      currentUser.organizationId!,
+      dto,
+    );
+  }
+
+  @Patch(':patientId/status')
+  @Roles(
+    MembershipRole.OWNER,
+    MembershipRole.ADMIN,
+  )
+  updateStatus(
+    @Param('patientId')
+    patientId: string,
+    @Body()
+    dto: UpdatePatientStatusDto,
+    @CurrentUser()
+    currentUser: AuthenticatedRequestContext,
+  ) {
+    return this.patientsService.updatePatientStatus(
+      patientId,
+      currentUser.organizationId!,
+      dto.status,
+    );
   }
 }
