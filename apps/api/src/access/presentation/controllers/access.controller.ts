@@ -21,6 +21,7 @@ import {
 } from '@nestjs/swagger';
 import type { Request } from 'express';
 
+import { ErrorResponseDto } from '../../../common/presentation/dto/error-response.dto';
 import { MembershipRole } from '../../../users/domain/entities/membership.entity';
 
 import { LoginService } from '../../application/services/login.service';
@@ -36,9 +37,16 @@ import type { AuthenticatedRequestContext } from '../../domain/authentication/au
 
 import { CurrentUser } from '../decorators/current-user.decorator';
 import { Roles } from '../decorators/roles.decorator';
+
 import { LoginDto } from '../dtos/login.dto';
 import { RefreshTokenDto } from '../dtos/refresh-token.dto';
+import { AuthenticatedContextResponseDto } from '../dtos/responses/authenticated-context-response.dto';
+import { LoginResponseDto } from '../dtos/responses/login-response.dto';
+import { OrganizationAdminCheckResponseDto } from '../dtos/responses/organization-admin-check-response.dto';
+import { RefreshSessionResponseDto } from '../dtos/responses/refresh-session-response.dto';
+import { SelectOrganizationResponseDto } from '../dtos/responses/select-organization-response.dto';
 import { SelectOrganizationDto } from '../dtos/select-organization.dto';
+
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { RolesGuard } from '../guards/roles.guard';
 
@@ -64,10 +72,12 @@ export class AccessController {
   @ApiOkResponse({
     description:
       'Usuário autenticado e sessão criada com sucesso.',
+    type: LoginResponseDto,
   })
   @ApiUnauthorizedResponse({
     description:
       'E-mail ou senha inválidos, usuário bloqueado ou usuário inativo.',
+    type: ErrorResponseDto,
   })
   async login(
     @Body()
@@ -102,17 +112,20 @@ export class AccessController {
   @ApiOkResponse({
     description:
       'Sessão renovada e novos tokens emitidos com sucesso.',
+    type: RefreshSessionResponseDto,
   })
   @ApiUnauthorizedResponse({
     description:
       'Refresh token inválido, expirado, revogado ou já utilizado.',
+    type: ErrorResponseDto,
   })
   async refresh(
     @Body()
     input: RefreshTokenDto,
   ): Promise<RefreshSessionResult> {
     return this.refreshSessionService.execute({
-      refreshToken: input.refreshToken,
+      refreshToken:
+        input.refreshToken,
     });
   }
 
@@ -131,13 +144,15 @@ export class AccessController {
   @ApiUnauthorizedResponse({
     description:
       'Refresh token inválido ou sessão não reconhecida.',
+    type: ErrorResponseDto,
   })
   async logout(
     @Body()
     input: RefreshTokenDto,
   ): Promise<void> {
     await this.logoutSessionService.execute({
-      refreshToken: input.refreshToken,
+      refreshToken:
+        input.refreshToken,
     });
   }
 
@@ -158,13 +173,15 @@ export class AccessController {
   @ApiUnauthorizedResponse({
     description:
       'Access token ausente, inválido ou expirado.',
+    type: ErrorResponseDto,
   })
   async logoutAll(
     @CurrentUser()
     currentUser: AuthenticatedRequestContext,
   ): Promise<void> {
     await this.logoutAllSessionsService.execute({
-      userId: currentUser.userId,
+      userId:
+        currentUser.userId,
     });
   }
 
@@ -181,14 +198,17 @@ export class AccessController {
   @ApiOkResponse({
     description:
       'Organização selecionada e token contextualizado emitido com sucesso.',
+    type: SelectOrganizationResponseDto,
   })
   @ApiUnauthorizedResponse({
     description:
       'Access token ausente, inválido ou expirado.',
+    type: ErrorResponseDto,
   })
   @ApiForbiddenResponse({
     description:
       'O usuário não possui uma associação ativa com a organização informada.',
+    type: ErrorResponseDto,
   })
   async selectOrganization(
     @Body()
@@ -197,9 +217,12 @@ export class AccessController {
     currentUser: AuthenticatedRequestContext,
   ): Promise<SelectOrganizationResult> {
     return this.selectOrganizationService.execute({
-      userId: currentUser.userId,
-      sessionId: currentUser.sessionId,
-      email: currentUser.email,
+      userId:
+        currentUser.userId,
+      sessionId:
+        currentUser.sessionId,
+      email:
+        currentUser.email,
       organizationId:
         input.organizationId,
     });
@@ -217,10 +240,12 @@ export class AccessController {
   @ApiOkResponse({
     description:
       'Contexto autenticado retornado com sucesso.',
+    type: AuthenticatedContextResponseDto,
   })
   @ApiUnauthorizedResponse({
     description:
       'Access token ausente, inválido ou expirado.',
+    type: ErrorResponseDto,
   })
   getMe(
     @CurrentUser()
@@ -249,31 +274,30 @@ export class AccessController {
   @ApiOkResponse({
     description:
       'Usuário autorizado como administrador da organização.',
+    type: OrganizationAdminCheckResponseDto,
   })
   @ApiUnauthorizedResponse({
     description:
       'Access token ausente, inválido ou expirado.',
+    type: ErrorResponseDto,
   })
   @ApiForbiddenResponse({
     description:
       'Usuário sem contexto organizacional ou sem função administrativa.',
+    type: ErrorResponseDto,
   })
   organizationAdminCheck(
     @CurrentUser()
     currentUser: AuthenticatedRequestContext,
-  ): {
-    authorized: true;
-    organizationId: string;
-    membershipId: string;
-    role: MembershipRole;
-  } {
+  ): OrganizationAdminCheckResponseDto {
     return {
       authorized: true,
       organizationId:
         currentUser.organizationId!,
       membershipId:
         currentUser.membershipId!,
-      role: currentUser.role!,
+      role:
+        currentUser.role!,
     };
   }
 }
