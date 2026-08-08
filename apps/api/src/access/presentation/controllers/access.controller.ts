@@ -24,6 +24,8 @@ import type { Request } from 'express';
 import { ErrorResponseDto } from '../../../common/presentation/dto/error-response.dto';
 import { MembershipRole } from '../../../users/domain/entities/membership.entity';
 
+import { ListUserOrganizationsService } from '../../application/services/list-user-organizations.service';
+import type { UserOrganizationResult } from '../../application/services/list-user-organizations.service';
 import { LoginService } from '../../application/services/login.service';
 import type { LoginResult } from '../../application/services/login.service';
 import { LogoutAllSessionsService } from '../../application/services/logout-all-sessions.service';
@@ -45,6 +47,7 @@ import { LoginResponseDto } from '../dtos/responses/login-response.dto';
 import { OrganizationAdminCheckResponseDto } from '../dtos/responses/organization-admin-check-response.dto';
 import { RefreshSessionResponseDto } from '../dtos/responses/refresh-session-response.dto';
 import { SelectOrganizationResponseDto } from '../dtos/responses/select-organization-response.dto';
+import { UserOrganizationResponseDto } from '../dtos/responses/user-organization-response.dto';
 import { SelectOrganizationDto } from '../dtos/select-organization.dto';
 
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
@@ -55,6 +58,7 @@ import { RolesGuard } from '../guards/roles.guard';
 export class AccessController {
   constructor(
     private readonly loginService: LoginService,
+    private readonly listUserOrganizationsService: ListUserOrganizationsService,
     private readonly refreshSessionService: RefreshSessionService,
     private readonly logoutSessionService: LogoutSessionService,
     private readonly logoutAllSessionsService: LogoutAllSessionsService,
@@ -99,6 +103,36 @@ export class AccessController {
           ? userAgent
           : null,
     });
+  }
+
+  @Get('organizations')
+  @UseGuards(JwtAuthGuard)
+  @Header('Cache-Control', 'no-store')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary:
+      'Listar organizações disponíveis para o usuário',
+    description:
+      'Retorna somente as organizações em que o usuário autenticado possui uma membership ativa. Esse endpoint é utilizado antes da seleção do contexto multi-tenant.',
+  })
+  @ApiOkResponse({
+    description:
+      'Organizações disponíveis retornadas com sucesso.',
+    type: UserOrganizationResponseDto,
+    isArray: true,
+  })
+  @ApiUnauthorizedResponse({
+    description:
+      'Access token ausente, inválido ou expirado.',
+    type: ErrorResponseDto,
+  })
+  async listOrganizations(
+    @CurrentUser()
+    currentUser: AuthenticatedRequestContext,
+  ): Promise<UserOrganizationResult[]> {
+    return this.listUserOrganizationsService.execute(
+      currentUser.userId,
+    );
   }
 
   @Post('refresh')

@@ -28,12 +28,15 @@ import { PrismaRefreshSessionTransaction } from './infrastructure/transactions/p
 import { AccessController } from './presentation/controllers/access.controller';
 import { JwtAuthGuard } from './presentation/guards/jwt-auth.guard';
 import { RolesGuard } from './presentation/guards/roles.guard';
+import { ListUserOrganizationsService } from './application/services/list-user-organizations.service';
+import { OrganizationsModule } from '../organizations/organizations.module';
 
 @Module({
   imports: [
     PrismaModule,
     AuthModule,
     UsersModule,
+    OrganizationsModule,
     JwtModule.register({}),
   ],
   controllers: [
@@ -41,11 +44,12 @@ import { RolesGuard } from './presentation/guards/roles.guard';
   ],
   providers: [
     LoginService,
+    ListUserOrganizationsService,
     RefreshSessionService,
     LogoutSessionService,
     LogoutAllSessionsService,
     SelectOrganizationService,
-
+  
     JwtAuthGuard,
     RolesGuard,
 
