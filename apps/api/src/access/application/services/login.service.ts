@@ -108,6 +108,7 @@ export class LoginService {
     const session: Session = {
       id: randomUUID(),
       userId: user.id,
+      selectedOrganizationId: null,
       refreshTokenHash,
       ipAddress:
         this.normalizeOptionalValue(

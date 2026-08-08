@@ -7,6 +7,7 @@ import {
 } from '../../../users/domain/entities/membership.entity';
 import { MembershipsRepository } from '../../../users/domain/repositories/memberships.repository';
 import { MembershipAccessDeniedError } from '../../domain/errors/membership-access-denied.error';
+import { SessionsRepository } from '../../domain/repositories/sessions.repository';
 import { AccessTokenProvider } from '../../domain/tokens/access-token-provider';
 
 export interface SelectOrganizationInput {
@@ -30,9 +31,14 @@ export interface SelectOrganizationResult {
 @Injectable()
 export class SelectOrganizationService {
   constructor(
-    private readonly membershipsRepository: MembershipsRepository,
-    private readonly accessTokenProvider: AccessTokenProvider,
-    private readonly configService: ConfigService,
+    private readonly membershipsRepository:
+      MembershipsRepository,
+    private readonly sessionsRepository:
+      SessionsRepository,
+    private readonly accessTokenProvider:
+      AccessTokenProvider,
+    private readonly configService:
+      ConfigService,
   ) {}
 
   async execute(
@@ -51,6 +57,32 @@ export class SelectOrganizationService {
       membership,
       input.userId,
       organizationId,
+    );
+
+    const session =
+      await this.sessionsRepository.findById(
+        input.sessionId,
+      );
+
+    if (
+      !session ||
+      session.userId !== input.userId
+    ) {
+      throw new MembershipAccessDeniedError();
+    }
+
+    const updatedAt =
+      new Date().toISOString();
+
+    const updatedSession = {
+      ...session,
+      selectedOrganizationId:
+        membership.organizationId,
+      updatedAt,
+    };
+
+    await this.sessionsRepository.update(
+      updatedSession,
     );
 
     const accessToken =
@@ -76,8 +108,10 @@ export class SelectOrganizationService {
       context: {
         organizationId:
           membership.organizationId,
-        membershipId: membership.id,
-        role: membership.role,
+        membershipId:
+          membership.id,
+        role:
+          membership.role,
       },
     };
   }

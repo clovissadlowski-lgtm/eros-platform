@@ -2,6 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import {
+  Membership,
+  MembershipStatus,
+} from '../../../users/domain/entities/membership.entity';
+import { MembershipsRepository } from '../../../users/domain/repositories/memberships.repository';
+import {
   User,
   UserStatus,
 } from '../../../users/domain/entities/user.entity';
@@ -32,13 +37,22 @@ export interface RefreshSessionResult {
 @Injectable()
 export class RefreshSessionService {
   constructor(
-    private readonly sessionsRepository: SessionsRepository,
-    private readonly usersRepository: UsersRepository,
-    private readonly accessTokenProvider: AccessTokenProvider,
-    private readonly refreshTokenGenerator: RefreshTokenGenerator,
-    private readonly refreshTokenHasher: RefreshTokenHasher,
-    private readonly refreshSessionTransaction: RefreshSessionTransaction,
-    private readonly configService: ConfigService,
+    private readonly sessionsRepository:
+      SessionsRepository,
+    private readonly usersRepository:
+      UsersRepository,
+    private readonly membershipsRepository:
+      MembershipsRepository,
+    private readonly accessTokenProvider:
+      AccessTokenProvider,
+    private readonly refreshTokenGenerator:
+      RefreshTokenGenerator,
+    private readonly refreshTokenHasher:
+      RefreshTokenHasher,
+    private readonly refreshSessionTransaction:
+      RefreshSessionTransaction,
+    private readonly configService:
+      ConfigService,
   ) {}
 
   async execute(
@@ -66,7 +80,8 @@ export class RefreshSessionService {
     }
 
     const now = new Date();
-    const timestamp = now.toISOString();
+    const timestamp =
+      now.toISOString();
 
     this.ensureSessionCanBeRefreshed(
       session,
@@ -78,7 +93,29 @@ export class RefreshSessionService {
         session.userId,
       );
 
-    this.ensureUserCanAuthenticate(user);
+    this.ensureUserCanAuthenticate(
+      user,
+    );
+
+    let membership:
+      | Membership
+      | null = null;
+
+    if (
+      session.selectedOrganizationId
+    ) {
+      membership =
+        await this.membershipsRepository.findByUserAndOrganization(
+          user.id,
+          session.selectedOrganizationId,
+        );
+
+      this.ensureMembershipCanBeUsed(
+        membership,
+        user.id,
+        session.selectedOrganizationId,
+      );
+    }
 
     const nextRefreshToken =
       this.refreshTokenGenerator.generate();
@@ -93,23 +130,38 @@ export class RefreshSessionService {
         sub: user.id,
         sessionId: session.id,
         email: user.email,
+
+        ...(membership
+          ? {
+              organizationId:
+                membership.organizationId,
+              membershipId:
+                membership.id,
+              role:
+                membership.role,
+            }
+          : {}),
       });
 
     const rotatedSession: Session = {
       ...session,
       refreshTokenHash:
         nextRefreshTokenHash,
-      lastUsedAt: timestamp,
-      updatedAt: timestamp,
+      lastUsedAt:
+        timestamp,
+      updatedAt:
+        timestamp,
     };
 
     const persistedSession =
       await this.refreshSessionTransaction.execute(
         {
-          session: rotatedSession,
+          session:
+            rotatedSession,
           expectedRefreshTokenHash:
             currentRefreshTokenHash,
-          now: timestamp,
+          now:
+            timestamp,
         },
       );
 
@@ -124,11 +176,15 @@ export class RefreshSessionService {
 
     return {
       accessToken,
-      refreshToken: nextRefreshToken,
-      tokenType: 'Bearer',
-      expiresIn: accessTokenTtlSeconds,
+      refreshToken:
+        nextRefreshToken,
+      tokenType:
+        'Bearer',
+      expiresIn:
+        accessTokenTtlSeconds,
       session: {
-        id: persistedSession.id,
+        id:
+          persistedSession.id,
         expiresAt:
           persistedSession.expiresAt,
       },
@@ -145,9 +201,13 @@ export class RefreshSessionService {
     const isExpired =
       new Date(
         session.expiresAt,
-      ).getTime() <= now.getTime();
+      ).getTime() <=
+      now.getTime();
 
-    if (isRevoked || isExpired) {
+    if (
+      isRevoked ||
+      isExpired
+    ) {
       throw new InvalidRefreshTokenError();
     }
   }
@@ -157,8 +217,28 @@ export class RefreshSessionService {
   ): asserts user is User {
     if (
       !user ||
-      user.status !== UserStatus.ACTIVE
+      user.status !==
+        UserStatus.ACTIVE
     ) {
+      throw new InvalidRefreshTokenError();
+    }
+  }
+
+  private ensureMembershipCanBeUsed(
+    membership: Membership | null,
+    userId: string,
+    organizationId: string,
+  ): asserts membership is Membership {
+    const isValid =
+      membership !== null &&
+      membership.userId ===
+        userId &&
+      membership.organizationId ===
+        organizationId &&
+      membership.status ===
+        MembershipStatus.ACTIVE;
+
+    if (!isValid) {
       throw new InvalidRefreshTokenError();
     }
   }

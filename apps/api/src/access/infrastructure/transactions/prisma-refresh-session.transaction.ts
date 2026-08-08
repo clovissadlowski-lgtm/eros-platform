@@ -10,6 +10,7 @@ import {
 interface PrismaSessionRecord {
   id: string;
   userId: string;
+  selectedOrganizationId: string | null;
   refreshTokenHash: string;
   ipAddress: string | null;
   userAgent: string | null;
@@ -41,16 +42,23 @@ export class PrismaRefreshSessionTransaction
                 input.expectedRefreshTokenHash,
               revokedAt: null,
               expiresAt: {
-                gt: new Date(input.now),
+                gt: new Date(
+                  input.now,
+                ),
               },
             },
             data: {
               refreshTokenHash:
-                input.session.refreshTokenHash,
+                input.session
+                  .refreshTokenHash,
+              selectedOrganizationId:
+                input.session
+                  .selectedOrganizationId,
               lastUsedAt:
                 input.session.lastUsedAt
                   ? new Date(
-                      input.session.lastUsedAt,
+                      input.session
+                        .lastUsedAt,
                     )
                   : null,
               updatedAt: new Date(
@@ -59,7 +67,9 @@ export class PrismaRefreshSessionTransaction
             },
           });
 
-        if (updateResult.count !== 1) {
+        if (
+          updateResult.count !== 1
+        ) {
           return null;
         }
 
@@ -71,7 +81,9 @@ export class PrismaRefreshSessionTransaction
           });
 
         return updatedSession
-          ? this.toDomain(updatedSession)
+          ? this.toDomain(
+              updatedSession,
+            )
           : null;
       },
     );
@@ -83,10 +95,14 @@ export class PrismaRefreshSessionTransaction
     return {
       id: session.id,
       userId: session.userId,
+      selectedOrganizationId:
+        session.selectedOrganizationId,
       refreshTokenHash:
         session.refreshTokenHash,
-      ipAddress: session.ipAddress,
-      userAgent: session.userAgent,
+      ipAddress:
+        session.ipAddress,
+      userAgent:
+        session.userAgent,
       expiresAt:
         session.expiresAt.toISOString(),
       lastUsedAt:

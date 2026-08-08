@@ -1,6 +1,7 @@
 export interface Session {
   id: string;
   userId: string;
+  selectedOrganizationId: string | null;
   refreshTokenHash: string;
   ipAddress: string | null;
   userAgent: string | null;

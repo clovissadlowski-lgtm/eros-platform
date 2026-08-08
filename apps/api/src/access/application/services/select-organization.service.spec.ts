@@ -8,10 +8,12 @@ import {
 } from '../../../users/domain/entities/membership.entity';
 import { InMemoryMembershipsRepository } from '../../../users/infrastructure/repositories/in-memory-memberships.repository';
 import { MembershipAccessDeniedError } from '../../domain/errors/membership-access-denied.error';
+import { Session } from '../../domain/entities/session.entity';
 import {
   AccessTokenPayload,
   AccessTokenProvider,
 } from '../../domain/tokens/access-token-provider';
+import { InMemorySessionsRepository } from '../../infrastructure/repositories/in-memory-sessions.repository';
 import { SelectOrganizationService } from './select-organization.service';
 
 class FakeAccessTokenProvider
@@ -24,7 +26,8 @@ class FakeAccessTokenProvider
   async generate(
     payload: AccessTokenPayload,
   ): Promise<string> {
-    this.generatedPayload = payload;
+    this.generatedPayload =
+      payload;
 
     return 'tenant-access-token';
   }
@@ -32,7 +35,9 @@ class FakeAccessTokenProvider
   async verify(
     _accessToken: string,
   ): Promise<AccessTokenPayload> {
-    if (!this.generatedPayload) {
+    if (
+      !this.generatedPayload
+    ) {
       throw new Error(
         'No access token was generated.',
       );
@@ -48,6 +53,9 @@ describe(
     let membershipsRepository:
       InMemoryMembershipsRepository;
 
+    let sessionsRepository:
+      InMemorySessionsRepository;
+
     let accessTokenProvider:
       FakeAccessTokenProvider;
 
@@ -58,12 +66,16 @@ describe(
       membershipsRepository =
         new InMemoryMembershipsRepository();
 
+      sessionsRepository =
+        new InMemorySessionsRepository();
+
       accessTokenProvider =
         new FakeAccessTokenProvider();
 
       service =
         new SelectOrganizationService(
           membershipsRepository,
+          sessionsRepository,
           accessTokenProvider,
           new ConfigService({
             JWT_ACCESS_TTL_SECONDS: 900,
@@ -71,85 +83,150 @@ describe(
         );
     });
 
-    it('selects an organization through an active membership', async () => {
-      const membership =
-        createMembership();
+    it(
+      'selects an organization through an active membership',
+      async () => {
+        const membership =
+          createMembership();
 
-      await membershipsRepository.create(
-        membership,
-      );
+        await membershipsRepository.create(
+          membership,
+        );
 
-      const result = await service.execute({
-        userId: membership.userId,
-        sessionId: randomUUID(),
-        email: 'user@higeia.test',
-        organizationId:
-          membership.organizationId,
-      });
+        const session =
+          createSession({
+            userId:
+              membership.userId,
+          });
 
-      expect(result.accessToken).toBe(
-        'tenant-access-token',
-      );
+        await sessionsRepository.create(
+          session,
+        );
 
-      expect(result.tokenType).toBe(
-        'Bearer',
-      );
+        const result =
+          await service.execute({
+            userId:
+              membership.userId,
+            sessionId:
+              session.id,
+            email:
+              'user@higeia.test',
+            organizationId:
+              membership.organizationId,
+          });
 
-      expect(result.expiresIn).toBe(900);
+        expect(
+          result.accessToken,
+        ).toBe(
+          'tenant-access-token',
+        );
 
-      expect(result.context).toEqual({
-        organizationId:
-          membership.organizationId,
-        membershipId: membership.id,
-        role: membership.role,
-      });
-    });
+        expect(
+          result.tokenType,
+        ).toBe(
+          'Bearer',
+        );
 
-    it('includes tenant information in the new access token', async () => {
-      const membership =
-        createMembership({
-          role: MembershipRole.ADMIN,
+        expect(
+          result.expiresIn,
+        ).toBe(900);
+
+        expect(
+          result.context,
+        ).toEqual({
+          organizationId:
+            membership.organizationId,
+          membershipId:
+            membership.id,
+          role:
+            membership.role,
         });
 
-      await membershipsRepository.create(
-        membership,
-      );
+        const updatedSession =
+          await sessionsRepository.findById(
+            session.id,
+          );
 
-      const sessionId = randomUUID();
-
-      await service.execute({
-        userId: membership.userId,
-        sessionId,
-        email: 'admin@higeia.test',
-        organizationId:
+        expect(
+          updatedSession?.selectedOrganizationId,
+        ).toBe(
           membership.organizationId,
-      });
+        );
+      },
+    );
 
-      expect(
-        accessTokenProvider.generatedPayload,
-      ).toEqual({
-        sub: membership.userId,
-        sessionId,
-        email: 'admin@higeia.test',
-        organizationId:
-          membership.organizationId,
-        membershipId: membership.id,
-        role: MembershipRole.ADMIN,
-      });
-    });
+    it(
+      'includes tenant information in the new access token',
+      async () => {
+        const membership =
+          createMembership({
+            role:
+              MembershipRole.ADMIN,
+          });
 
-    it('rejects an unknown membership', async () => {
-      await expect(
-        service.execute({
-          userId: randomUUID(),
-          sessionId: randomUUID(),
-          email: 'user@higeia.test',
-          organizationId: randomUUID(),
-        }),
-      ).rejects.toBeInstanceOf(
-        MembershipAccessDeniedError,
-      );
-    });
+        await membershipsRepository.create(
+          membership,
+        );
+
+        const session =
+          createSession({
+            userId:
+              membership.userId,
+          });
+
+        await sessionsRepository.create(
+          session,
+        );
+
+        await service.execute({
+          userId:
+            membership.userId,
+          sessionId:
+            session.id,
+          email:
+            'admin@higeia.test',
+          organizationId:
+            membership.organizationId,
+        });
+
+        expect(
+          accessTokenProvider.generatedPayload,
+        ).toEqual({
+          sub:
+            membership.userId,
+          sessionId:
+            session.id,
+          email:
+            'admin@higeia.test',
+          organizationId:
+            membership.organizationId,
+          membershipId:
+            membership.id,
+          role:
+            MembershipRole.ADMIN,
+        });
+      },
+    );
+
+    it(
+      'rejects an unknown membership',
+      async () => {
+        await expect(
+          service.execute({
+            userId:
+              randomUUID(),
+            sessionId:
+              randomUUID(),
+            email:
+              'user@higeia.test',
+            organizationId:
+              randomUUID(),
+          }),
+        ).rejects.toBeInstanceOf(
+          MembershipAccessDeniedError,
+        );
+      },
+    );
 
     it.each([
       MembershipStatus.INVITED,
@@ -169,9 +246,12 @@ describe(
 
         await expect(
           service.execute({
-            userId: membership.userId,
-            sessionId: randomUUID(),
-            email: 'user@higeia.test',
+            userId:
+              membership.userId,
+            sessionId:
+              randomUUID(),
+            email:
+              'user@higeia.test',
             organizationId:
               membership.organizationId,
           }),
@@ -181,42 +261,89 @@ describe(
       },
     );
 
-    it('rejects access through another user membership', async () => {
-      const membership =
-        createMembership();
+    it(
+      'rejects access through another user membership',
+      async () => {
+        const membership =
+          createMembership();
 
-      await membershipsRepository.create(
-        membership,
-      );
+        await membershipsRepository.create(
+          membership,
+        );
 
-      await expect(
-        service.execute({
-          userId: randomUUID(),
-          sessionId: randomUUID(),
-          email: 'other@higeia.test',
-          organizationId:
-            membership.organizationId,
-        }),
-      ).rejects.toBeInstanceOf(
-        MembershipAccessDeniedError,
-      );
-    });
+        await expect(
+          service.execute({
+            userId:
+              randomUUID(),
+            sessionId:
+              randomUUID(),
+            email:
+              'other@higeia.test',
+            organizationId:
+              membership.organizationId,
+          }),
+        ).rejects.toBeInstanceOf(
+          MembershipAccessDeniedError,
+        );
+      },
+    );
 
     function createMembership(
-      overrides: Partial<Membership> = {},
+      overrides:
+        Partial<Membership> = {},
     ): Membership {
       const timestamp =
         '2026-08-01T12:00:00.000Z';
 
       return {
-        id: randomUUID(),
-        userId: randomUUID(),
-        organizationId: randomUUID(),
-        role: MembershipRole.OWNER,
+        id:
+          randomUUID(),
+        userId:
+          randomUUID(),
+        organizationId:
+          randomUUID(),
+        role:
+          MembershipRole.OWNER,
         status:
           MembershipStatus.ACTIVE,
-        createdAt: timestamp,
-        updatedAt: timestamp,
+        createdAt:
+          timestamp,
+        updatedAt:
+          timestamp,
+        ...overrides,
+      };
+    }
+
+    function createSession(
+      overrides:
+        Partial<Session> = {},
+    ): Session {
+      const timestamp =
+        '2026-08-01T12:00:00.000Z';
+
+      return {
+        id:
+          randomUUID(),
+        userId:
+          randomUUID(),
+        selectedOrganizationId:
+          null,
+        refreshTokenHash:
+          randomUUID(),
+        ipAddress:
+          null,
+        userAgent:
+          null,
+        expiresAt:
+          '2026-09-01T12:00:00.000Z',
+        lastUsedAt:
+          null,
+        revokedAt:
+          null,
+        createdAt:
+          timestamp,
+        updatedAt:
+          timestamp,
         ...overrides,
       };
     }

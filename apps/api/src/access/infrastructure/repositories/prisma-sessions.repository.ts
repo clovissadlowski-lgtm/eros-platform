@@ -7,6 +7,7 @@ import { SessionsRepository } from '../../domain/repositories/sessions.repositor
 interface PrismaSessionRecord {
   id: string;
   userId: string;
+  selectedOrganizationId: string | null;
   refreshTokenHash: string;
   ipAddress: string | null;
   userAgent: string | null;
@@ -33,6 +34,8 @@ export class PrismaSessionsRepository
         data: {
           id: session.id,
           userId: session.userId,
+          selectedOrganizationId:
+            session.selectedOrganizationId,
           refreshTokenHash:
             session.refreshTokenHash,
           ipAddress: session.ipAddress,
@@ -171,6 +174,8 @@ export class PrismaSessionsRepository
         session.refreshTokenHash,
       ipAddress: session.ipAddress,
       userAgent: session.userAgent,
+      selectedOrganizationId:
+        session.selectedOrganizationId,
       expiresAt:
         session.expiresAt.toISOString(),
       lastUsedAt:

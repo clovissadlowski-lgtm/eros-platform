@@ -1,4 +1,8 @@
 import {
+  refreshAccessToken,
+} from '@/lib/auth/refresh-session';
+
+import {
   ApiError,
   type ApiErrorResponse,
 } from './api-error';
@@ -42,14 +46,19 @@ function isApiErrorResponse(
   );
 }
 
-export async function apiRequest<T>(
+async function executeRequest(
   path: string,
-  options: ApiRequestOptions = {},
-): Promise<T> {
+  options: ApiRequestOptions,
+  accessToken:
+    | string
+    | null
+    | undefined,
+): Promise<Response> {
   const {
     body,
-    accessToken,
     headers,
+    accessToken:
+      _ignoredAccessToken,
     ...requestOptions
   } = options;
 
@@ -80,19 +89,28 @@ export async function apiRequest<T>(
       ? path
       : `/${path}`;
 
-  const response = await fetch(
+  return fetch(
     `${apiConfig.baseUrl}${normalizedPath}`,
     {
       ...requestOptions,
-      headers: requestHeaders,
+      headers:
+        requestHeaders,
       body:
         body === undefined
           ? undefined
-          : JSON.stringify(body),
+          : JSON.stringify(
+              body,
+            ),
     },
   );
+}
 
-  if (response.status === 204) {
+async function parseResponse<T>(
+  response: Response,
+): Promise<T> {
+  if (
+    response.status === 204
+  ) {
     return undefined as T;
   }
 
@@ -125,4 +143,54 @@ export async function apiRequest<T>(
   }
 
   return responseBody as T;
+}
+
+export async function apiRequest<T>(
+  path: string,
+  options: ApiRequestOptions = {},
+): Promise<T> {
+  let response =
+    await executeRequest(
+      path,
+      options,
+      options.accessToken,
+    );
+
+  const canRefresh =
+    response.status === 401 &&
+    Boolean(
+      options.accessToken,
+    ) &&
+    path !== '/auth/refresh';
+
+  if (canRefresh) {
+    try {
+      const newAccessToken =
+        await refreshAccessToken();
+
+      response =
+        await executeRequest(
+          path,
+          options,
+          newAccessToken,
+        );
+    } catch {
+      if (
+        typeof window !==
+        'undefined'
+      ) {
+        window.location.replace(
+          '/login',
+        );
+      }
+
+      throw new Error(
+        'Authenticated session expired.',
+      );
+    }
+  }
+
+  return parseResponse<T>(
+    response,
+  );
 }

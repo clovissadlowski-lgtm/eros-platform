@@ -55,6 +55,8 @@ export class PrismaLoginPersistenceTransaction
             data: {
               id: input.session.id,
               userId: input.session.userId,
+              selectedOrganizationId:
+                input.session.selectedOrganizationId,
               refreshTokenHash:
                 input.session
                   .refreshTokenHash,
@@ -130,6 +132,7 @@ export class PrismaLoginPersistenceTransaction
   private toDomainSession(session: {
     id: string;
     userId: string;
+    selectedOrganizationId: string | null;
     refreshTokenHash: string;
     ipAddress: string | null;
     userAgent: string | null;
@@ -142,6 +145,8 @@ export class PrismaLoginPersistenceTransaction
     return {
       id: session.id,
       userId: session.userId,
+      selectedOrganizationId:
+        session.selectedOrganizationId,
       refreshTokenHash:
         session.refreshTokenHash,
       ipAddress: session.ipAddress,

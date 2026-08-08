@@ -1,7 +1,17 @@
+import type {
+  Metadata,
+} from 'next';
+
+import {
+  CreatePatientScreen,
+} from '@/modules/patients/create-patient-screen';
+
+export const metadata: Metadata = {
+  title: 'Novo paciente',
+};
+
 export default function NewPatientPage() {
   return (
-    <h1 className="text-3xl font-semibold">
-      Novo paciente — próxima etapa
-    </h1>
+    <CreatePatientScreen />
   );
 }
