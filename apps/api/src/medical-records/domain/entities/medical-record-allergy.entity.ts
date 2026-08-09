@@ -25,8 +25,11 @@ export class MedicalRecordAllergy {
   medicalRecordId!: string;
   patientId!: string;
 
+  allergenCatalogId!: string | null;
+
   substance!: string;
   type!: AllergyType;
+
   reaction!: string | null;
   severity!: AllergySeverity | null;
   status!: AllergyStatus;

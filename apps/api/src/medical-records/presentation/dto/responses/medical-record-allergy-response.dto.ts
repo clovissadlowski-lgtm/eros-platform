@@ -30,27 +30,34 @@ export class MedicalRecordAllergyResponseDto {
   })
   patientId!: string;
 
+  @ApiPropertyOptional({
+    format: 'uuid',
+    nullable: true,
+    example: null,
+  })
+  allergenCatalogId!: string | null;
+
   @ApiProperty({
-    example: 'Dipirona',
+    example: 'Ácaros da poeira doméstica',
   })
   substance!: string;
 
   @ApiProperty({
     enum: AllergyType,
-    example: AllergyType.MEDICATION,
+    example: AllergyType.ENVIRONMENTAL,
   })
   type!: AllergyType;
 
   @ApiPropertyOptional({
     nullable: true,
-    example: 'Urticária',
+    example: 'Espirros, coriza e irritação nasal',
   })
   reaction!: string | null;
 
   @ApiPropertyOptional({
     enum: AllergySeverity,
     nullable: true,
-    example: AllergySeverity.MODERATE,
+    example: AllergySeverity.MILD,
   })
   severity!: AllergySeverity | null;
 
@@ -69,13 +76,17 @@ export class MedicalRecordAllergyResponseDto {
   @ApiPropertyOptional({
     nullable: true,
     example:
-      'Reação observada após uso do medicamento.',
+      'Reação observada após exposição frequente à poeira doméstica.',
   })
   notes!: string | null;
 
-  @ApiProperty()
+  @ApiProperty({
+    example: '2026-08-09T18:00:00.000Z',
+  })
   createdAt!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    example: '2026-08-09T18:00:00.000Z',
+  })
   updatedAt!: string;
 }

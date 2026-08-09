@@ -1,6 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+} from '@nestjs/common';
 
-import { PrismaService } from '../../../common/database/prisma.service';
+import {
+  PrismaService,
+} from '../../../common/database/prisma.service';
+
 import {
   AllergySeverity as PrismaAllergySeverity,
   AllergyStatus as PrismaAllergyStatus,
@@ -24,6 +29,8 @@ interface PrismaAllergyRecord {
   medicalRecordId: string;
   patientId: string;
 
+  allergenCatalogId: string | null;
+
   substance: string;
   type: PrismaAllergyType;
 
@@ -45,7 +52,8 @@ export class PrismaMedicalRecordAllergiesRepository
   implements MedicalRecordAllergiesRepository
 {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly prisma:
+      PrismaService,
   ) {}
 
   async create(
@@ -53,58 +61,63 @@ export class PrismaMedicalRecordAllergiesRepository
       MedicalRecordAllergy,
   ): Promise<MedicalRecordAllergy> {
     const created =
-      await this.prisma.medicalRecordAllergy.create({
-        data: {
-          id:
-            allergy.id,
+      await this.prisma
+        .medicalRecordAllergy
+        .create({
+          data: {
+            id:
+              allergy.id,
 
-          organizationId:
-            allergy.organizationId,
+            organizationId:
+              allergy.organizationId,
 
-          medicalRecordId:
-            allergy.medicalRecordId,
+            medicalRecordId:
+              allergy.medicalRecordId,
 
-          patientId:
-            allergy.patientId,
+            patientId:
+              allergy.patientId,
 
-          substance:
-            allergy.substance,
+            allergenCatalogId:
+              allergy.allergenCatalogId,
 
-          type:
-            allergy.type as PrismaAllergyType,
+            substance:
+              allergy.substance,
 
-          reaction:
-            allergy.reaction,
+            type:
+              allergy.type as PrismaAllergyType,
 
-          severity:
-            allergy.severity
-              ? allergy.severity as PrismaAllergySeverity
-              : null,
+            reaction:
+              allergy.reaction,
 
-          status:
-            allergy.status as PrismaAllergyStatus,
+            severity:
+              allergy.severity
+                ? allergy.severity as PrismaAllergySeverity
+                : null,
 
-          identifiedAt:
-            allergy.identifiedAt
-              ? new Date(
-                  allergy.identifiedAt,
-                )
-              : null,
+            status:
+              allergy.status as PrismaAllergyStatus,
 
-          notes:
-            allergy.notes,
+            identifiedAt:
+              allergy.identifiedAt
+                ? new Date(
+                    allergy.identifiedAt,
+                  )
+                : null,
 
-          createdAt:
-            new Date(
-              allergy.createdAt,
-            ),
+            notes:
+              allergy.notes,
 
-          updatedAt:
-            new Date(
-              allergy.updatedAt,
-            ),
-        },
-      });
+            createdAt:
+              new Date(
+                allergy.createdAt,
+              ),
+
+            updatedAt:
+              new Date(
+                allergy.updatedAt,
+              ),
+          },
+        });
 
     return this.toDomain(
       created,
@@ -116,13 +129,16 @@ export class PrismaMedicalRecordAllergiesRepository
     allergyId: string,
   ): Promise<MedicalRecordAllergy | null> {
     const allergy =
-      await this.prisma.medicalRecordAllergy.findFirst({
-        where: {
-          id:
-            allergyId,
-          organizationId,
-        },
-      });
+      await this.prisma
+        .medicalRecordAllergy
+        .findFirst({
+          where: {
+            id:
+              allergyId,
+
+            organizationId,
+          },
+        });
 
     return allergy
       ? this.toDomain(
@@ -136,26 +152,30 @@ export class PrismaMedicalRecordAllergiesRepository
     medicalRecordId: string,
   ): Promise<MedicalRecordAllergy[]> {
     const allergies =
-      await this.prisma.medicalRecordAllergy.findMany({
-        where: {
-          organizationId,
-          medicalRecordId,
-        },
+      await this.prisma
+        .medicalRecordAllergy
+        .findMany({
+          where: {
+            organizationId,
+            medicalRecordId,
+          },
 
-        orderBy: [
-          {
-            status:
-              'asc',
-          },
-          {
-            createdAt:
-              'desc',
-          },
-        ],
-      });
+          orderBy: [
+            {
+              status:
+                'asc',
+            },
+            {
+              createdAt:
+                'desc',
+            },
+          ],
+        });
 
     return allergies.map(
-      (allergy) =>
+      (
+        allergy,
+      ) =>
         this.toDomain(
           allergy,
         ),
@@ -167,46 +187,51 @@ export class PrismaMedicalRecordAllergiesRepository
       MedicalRecordAllergy,
   ): Promise<MedicalRecordAllergy> {
     const updated =
-      await this.prisma.medicalRecordAllergy.update({
-        where: {
-          id:
-            allergy.id,
-        },
+      await this.prisma
+        .medicalRecordAllergy
+        .update({
+          where: {
+            id:
+              allergy.id,
+          },
 
-        data: {
-          substance:
-            allergy.substance,
+          data: {
+            allergenCatalogId:
+              allergy.allergenCatalogId,
 
-          type:
-            allergy.type as PrismaAllergyType,
+            substance:
+              allergy.substance,
 
-          reaction:
-            allergy.reaction,
+            type:
+              allergy.type as PrismaAllergyType,
 
-          severity:
-            allergy.severity
-              ? allergy.severity as PrismaAllergySeverity
-              : null,
+            reaction:
+              allergy.reaction,
 
-          status:
-            allergy.status as PrismaAllergyStatus,
+            severity:
+              allergy.severity
+                ? allergy.severity as PrismaAllergySeverity
+                : null,
 
-          identifiedAt:
-            allergy.identifiedAt
-              ? new Date(
-                  allergy.identifiedAt,
-                )
-              : null,
+            status:
+              allergy.status as PrismaAllergyStatus,
 
-          notes:
-            allergy.notes,
+            identifiedAt:
+              allergy.identifiedAt
+                ? new Date(
+                    allergy.identifiedAt,
+                  )
+                : null,
 
-          updatedAt:
-            new Date(
-              allergy.updatedAt,
-            ),
-        },
-      });
+            notes:
+              allergy.notes,
+
+            updatedAt:
+              new Date(
+                allergy.updatedAt,
+              ),
+          },
+        });
 
     return this.toDomain(
       updated,
@@ -217,13 +242,16 @@ export class PrismaMedicalRecordAllergiesRepository
     organizationId: string,
     allergyId: string,
   ): Promise<void> {
-    await this.prisma.medicalRecordAllergy.deleteMany({
-      where: {
-        id:
-          allergyId,
-        organizationId,
-      },
-    });
+    await this.prisma
+      .medicalRecordAllergy
+      .deleteMany({
+        where: {
+          id:
+            allergyId,
+
+          organizationId,
+        },
+      });
   }
 
   private toDomain(
@@ -243,6 +271,9 @@ export class PrismaMedicalRecordAllergiesRepository
       patientId:
         allergy.patientId,
 
+      allergenCatalogId:
+        allergy.allergenCatalogId,
+
       substance:
         allergy.substance,
 
@@ -261,17 +292,20 @@ export class PrismaMedicalRecordAllergiesRepository
         allergy.status as AllergyStatus,
 
       identifiedAt:
-        allergy.identifiedAt?.toISOString() ??
+        allergy.identifiedAt
+          ?.toISOString() ??
         null,
 
       notes:
         allergy.notes,
 
       createdAt:
-        allergy.createdAt.toISOString(),
+        allergy.createdAt
+          .toISOString(),
 
       updatedAt:
-        allergy.updatedAt.toISOString(),
+        allergy.updatedAt
+          .toISOString(),
     };
   }
 }

@@ -3,26 +3,19 @@ import {
   IsEnum,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
-  MinLength,
 } from 'class-validator';
 
 import {
   AllergySeverity,
   AllergyStatus,
-  AllergyType,
 } from '../../domain/entities/medical-record-allergy.entity';
 
 export class UpdateMedicalRecordAllergyDto {
   @IsOptional()
-  @IsString()
-  @MinLength(2)
-  @MaxLength(200)
-  substance?: string;
-
-  @IsOptional()
-  @IsEnum(AllergyType)
-  type?: AllergyType;
+  @IsUUID()
+  allergenCatalogId?: string;
 
   @IsOptional()
   @IsString()

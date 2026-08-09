@@ -1,5 +1,19 @@
-import { Injectable } from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
+import {
+  BadRequestException,
+  Injectable,
+} from '@nestjs/common';
+
+import {
+  randomUUID,
+} from 'node:crypto';
+
+import {
+  AllergenCatalogType,
+} from '../../../allergen-catalog/domain/entities/allergen-catalog.entity';
+
+import {
+  AllergenCatalogRepository,
+} from '../../../allergen-catalog/domain/repositories/allergen-catalog.repository';
 
 import {
   AllergySeverity,
@@ -8,14 +22,30 @@ import {
   MedicalRecordAllergy,
 } from '../../domain/entities/medical-record-allergy.entity';
 
-import { MedicalRecordNotFoundError } from '../../domain/errors/medical-record-not-found.error';
+import {
+  MedicalRecordNotFoundError,
+} from '../../domain/errors/medical-record-not-found.error';
 
-import { MedicalRecordAllergiesRepository } from '../../domain/repositories/medical-record-allergies.repository';
-import { MedicalRecordsRepository } from '../../domain/repositories/medical-records.repository';
+import {
+  MedicalRecordAllergiesRepository,
+} from '../../domain/repositories/medical-record-allergies.repository';
+
+import {
+  MedicalRecordsRepository,
+} from '../../domain/repositories/medical-records.repository';
 
 export interface CreateAllergyInput {
-  substance: string;
-  type: AllergyType;
+  allergenCatalogId?: string;
+
+  /*
+   * Compatibilidade temporária com testes e
+   * chamadas internas anteriores ao catálogo.
+   *
+   * A API pública não aceita mais substance/type.
+   */
+  substance?: string;
+  type?: AllergyType;
+
   reaction?: string;
   severity?: AllergySeverity;
   status?: AllergyStatus;
@@ -24,8 +54,18 @@ export interface CreateAllergyInput {
 }
 
 export interface UpdateAllergyInput {
+  allergenCatalogId?: string;
+
+  /*
+   * Compatibilidade temporária com chamadas
+   * internas anteriores à padronização.
+   *
+   * A API pública não permite edição livre
+   * de substance/type.
+   */
   substance?: string;
   type?: AllergyType;
+
   reaction?: string | null;
   severity?: AllergySeverity | null;
   status?: AllergyStatus;
@@ -41,6 +81,9 @@ export class MedicalRecordAllergiesService {
 
     private readonly medicalRecordsRepository:
       MedicalRecordsRepository,
+
+    private readonly allergenCatalogRepository:
+      AllergenCatalogRepository,
   ) {}
 
   async create(
@@ -53,6 +96,42 @@ export class MedicalRecordAllergiesService {
         organizationId,
         patientId,
       );
+
+    const canonicalAllergen =
+      input.allergenCatalogId
+        ? await this.getAllergenCatalogItem(
+            input.allergenCatalogId,
+          )
+        : null;
+
+    const substance =
+      canonicalAllergen?.name ??
+      (
+        input.substance
+          ? this.normalizeRequiredText(
+              input.substance,
+            )
+          : null
+      );
+
+    if (!substance) {
+      throw new BadRequestException(
+        'An allergen from the canonical catalog is required.',
+      );
+    }
+
+    const type =
+      canonicalAllergen
+        ? this.mapCatalogTypeToAllergyType(
+            canonicalAllergen.type,
+          )
+        : input.type;
+
+    if (!type) {
+      throw new BadRequestException(
+        'Allergy type is required.',
+      );
+    }
 
     const timestamp =
       new Date().toISOString();
@@ -69,13 +148,13 @@ export class MedicalRecordAllergiesService {
 
         patientId,
 
-        substance:
-          this.normalizeRequiredText(
-            input.substance,
-          ),
+        allergenCatalogId:
+          canonicalAllergen?.id ??
+          null,
 
-        type:
-          input.type,
+        substance,
+
+        type,
 
         reaction:
           this.normalizeOptionalText(
@@ -122,10 +201,11 @@ export class MedicalRecordAllergiesService {
         patientId,
       );
 
-    return this.allergiesRepository.listByMedicalRecordId(
-      organizationId,
-      medicalRecord.id,
-    );
+    return this.allergiesRepository
+      .listByMedicalRecordId(
+        organizationId,
+        medicalRecord.id,
+      );
   }
 
   async update(
@@ -140,46 +220,61 @@ export class MedicalRecordAllergiesService {
     );
 
     const allergy =
-      await this.allergiesRepository.findById(
-        organizationId,
-        allergyId,
-      );
+      await this.allergiesRepository
+        .findById(
+          organizationId,
+          allergyId,
+        );
 
     if (
       !allergy ||
-      allergy.patientId !==
-        patientId
+      allergy.patientId !== patientId
     ) {
       throw new MedicalRecordNotFoundError();
     }
+
+    const canonicalAllergen =
+      input.allergenCatalogId !== undefined
+        ? await this.getAllergenCatalogItem(
+            input.allergenCatalogId,
+          )
+        : null;
 
     const updated:
       MedicalRecordAllergy = {
         ...allergy,
 
+        allergenCatalogId:
+          canonicalAllergen
+            ? canonicalAllergen.id
+            : allergy.allergenCatalogId,
+
         substance:
-          input.substance !==
-          undefined
-            ? this.normalizeRequiredText(
-                input.substance,
-              )
-            : allergy.substance,
+          canonicalAllergen
+            ? canonicalAllergen.name
+            : input.substance !== undefined
+              ? this.normalizeRequiredText(
+                  input.substance,
+                )
+              : allergy.substance,
 
         type:
-          input.type ??
-          allergy.type,
+          canonicalAllergen
+            ? this.mapCatalogTypeToAllergyType(
+                canonicalAllergen.type,
+              )
+            : input.type ??
+              allergy.type,
 
         reaction:
-          input.reaction !==
-          undefined
+          input.reaction !== undefined
             ? this.normalizeOptionalText(
                 input.reaction,
               )
             : allergy.reaction,
 
         severity:
-          input.severity !==
-          undefined
+          input.severity !== undefined
             ? input.severity
             : allergy.severity,
 
@@ -188,16 +283,14 @@ export class MedicalRecordAllergiesService {
           allergy.status,
 
         identifiedAt:
-          input.identifiedAt !==
-          undefined
+          input.identifiedAt !== undefined
             ? this.normalizeOptionalDate(
                 input.identifiedAt,
               )
             : allergy.identifiedAt,
 
         notes:
-          input.notes !==
-          undefined
+          input.notes !== undefined
             ? this.normalizeOptionalText(
                 input.notes,
               )
@@ -223,15 +316,15 @@ export class MedicalRecordAllergiesService {
     );
 
     const allergy =
-      await this.allergiesRepository.findById(
-        organizationId,
-        allergyId,
-      );
+      await this.allergiesRepository
+        .findById(
+          organizationId,
+          allergyId,
+        );
 
     if (
       !allergy ||
-      allergy.patientId !==
-        patientId
+      allergy.patientId !== patientId
     ) {
       throw new MedicalRecordNotFoundError();
     }
@@ -242,15 +335,60 @@ export class MedicalRecordAllergiesService {
     );
   }
 
+  private async getAllergenCatalogItem(
+    allergenCatalogId: string,
+  ) {
+    const allergen =
+      await this
+        .allergenCatalogRepository
+        .findActiveById(
+          allergenCatalogId,
+        );
+
+    if (!allergen) {
+      throw new BadRequestException(
+        'Allergen does not exist or is inactive.',
+      );
+    }
+
+    return allergen;
+  }
+
+  private mapCatalogTypeToAllergyType(
+    catalogType: AllergenCatalogType,
+  ): AllergyType {
+    switch (catalogType) {
+      case AllergenCatalogType.MEDICATION:
+      case AllergenCatalogType.ACTIVE_INGREDIENT:
+        return AllergyType.MEDICATION;
+
+      case AllergenCatalogType.FOOD:
+        return AllergyType.FOOD;
+
+      case AllergenCatalogType.ENVIRONMENTAL:
+        return AllergyType.ENVIRONMENTAL;
+
+      case AllergenCatalogType.CONTACT:
+        return AllergyType.CONTACT;
+
+      case AllergenCatalogType.BIOLOGICAL:
+      case AllergenCatalogType.CHEMICAL:
+      case AllergenCatalogType.OTHER:
+      default:
+        return AllergyType.OTHER;
+    }
+  }
+
   private async getMedicalRecord(
     organizationId: string,
     patientId: string,
   ) {
     const medicalRecord =
-      await this.medicalRecordsRepository.findByPatientId(
-        organizationId,
-        patientId,
-      );
+      await this.medicalRecordsRepository
+        .findByPatientId(
+          organizationId,
+          patientId,
+        );
 
     if (!medicalRecord) {
       throw new MedicalRecordNotFoundError();
@@ -295,8 +433,7 @@ export class MedicalRecordAllergiesService {
     if (
       value === undefined ||
       value === null ||
-      value.trim().length ===
-        0
+      value.trim().length === 0
     ) {
       return null;
     }
