@@ -1,18 +1,24 @@
 'use client';
 
 import {
+  useEffect,
+  useMemo,
   useState,
 } from 'react';
+
 import {
   AlertTriangle,
+  Check,
   Pencil,
   Plus,
+  Search,
   Trash2,
 } from 'lucide-react';
 
 import {
   Button,
 } from '@/components/ui/button';
+
 import {
   Card,
   CardContent,
@@ -21,24 +27,34 @@ import {
 } from '@/components/ui/card';
 
 import {
+  useAllergenSearch,
+} from './hooks/use-allergen-search';
+
+import {
   useAllergies,
 } from './hooks/use-allergies';
+
 import {
   useCreateAllergy,
 } from './hooks/use-create-allergy';
+
 import {
   useDeleteAllergy,
 } from './hooks/use-delete-allergy';
+
 import {
   useUpdateAllergy,
 } from './hooks/use-update-allergy';
 
 import type {
+  AllergenCatalogItem,
+  AllergenCatalogType,
   AllergySeverity,
   AllergyStatus,
   AllergyType,
   CreateMedicalRecordAllergyInput,
   MedicalRecordAllergy,
+  UpdateMedicalRecordAllergyInput,
 } from './medical-record.types';
 
 interface AllergiesCardProps {
@@ -46,22 +62,26 @@ interface AllergiesCardProps {
 }
 
 interface AllergyFormState {
-  substance: string;
-  type: AllergyType;
+  allergenCatalogId: string;
+  allergenSearch: string;
+
   reaction: string;
   severity: AllergySeverity | '';
   status: AllergyStatus;
+
   identifiedAt: string;
   notes: string;
 }
 
 const initialFormState:
 AllergyFormState = {
-  substance: '',
-  type: 'MEDICATION',
+  allergenCatalogId: '',
+  allergenSearch: '',
+
   reaction: '',
   severity: '',
   status: 'ACTIVE',
+
   identifiedAt: '',
   notes: '',
 };
@@ -72,6 +92,18 @@ Record<AllergyType, string> = {
   FOOD: 'Alimento',
   ENVIRONMENTAL: 'Ambiental',
   CONTACT: 'Contato',
+  OTHER: 'Outro',
+};
+
+const allergenCatalogTypeLabels:
+Record<AllergenCatalogType, string> = {
+  MEDICATION: 'Medicamento',
+  ACTIVE_INGREDIENT: 'Princípio ativo',
+  FOOD: 'Alimento',
+  ENVIRONMENTAL: 'Ambiental',
+  CONTACT: 'Contato',
+  BIOLOGICAL: 'Biológico',
+  CHEMICAL: 'Químico',
   OTHER: 'Outro',
 };
 
@@ -99,7 +131,10 @@ function formatDate(
   }
 
   const date =
-    value.slice(0, 10);
+    value.slice(
+      0,
+      10,
+    );
 
   const [
     year,
@@ -114,16 +149,24 @@ function allergyToFormState(
   allergy: MedicalRecordAllergy,
 ): AllergyFormState {
   return {
-    substance:
+    allergenCatalogId:
+      allergy.allergenCatalogId ??
+      '',
+
+    allergenSearch:
       allergy.substance,
-    type:
-      allergy.type,
+
     reaction:
-      allergy.reaction ?? '',
+      allergy.reaction ??
+      '',
+
     severity:
-      allergy.severity ?? '',
+      allergy.severity ??
+      '',
+
     status:
       allergy.status,
+
     identifiedAt:
       allergy.identifiedAt
         ? allergy.identifiedAt.slice(
@@ -131,9 +174,42 @@ function allergyToFormState(
             10,
           )
         : '',
+
     notes:
-      allergy.notes ?? '',
+      allergy.notes ??
+      '',
   };
+}
+
+function getPrimaryCode(
+  allergen:
+    AllergenCatalogItem,
+): string | null {
+  const primary =
+    allergen.externalCodes.find(
+      (code) =>
+        code.isPrimary,
+    );
+
+  const selected =
+    primary ??
+    allergen.externalCodes[0];
+
+  if (!selected) {
+    return null;
+  }
+
+  return `${selected.system}: ${selected.code}`;
+}
+
+function getSynonyms(
+  allergen:
+    AllergenCatalogItem,
+): string[] {
+  return allergen.synonyms.map(
+    (synonym) =>
+      synonym.term,
+  );
 }
 
 export function AllergiesCard({
@@ -180,10 +256,66 @@ export function AllergiesCard({
     initialFormState,
   );
 
+  const [
+    debouncedSearch,
+    setDebouncedSearch,
+  ] = useState('');
+
+  const [
+    isSearchOpen,
+    setIsSearchOpen,
+  ] = useState(false);
+
+  useEffect(
+    () => {
+      const timeout =
+        window.setTimeout(
+          () => {
+            setDebouncedSearch(
+              form.allergenSearch,
+            );
+          },
+          300,
+        );
+
+      return () => {
+        window.clearTimeout(
+          timeout,
+        );
+      };
+    },
+    [
+      form.allergenSearch,
+    ],
+  );
+
+  const catalogQuery =
+    useAllergenSearch(
+      debouncedSearch,
+    );
+
+  const editingAllergy =
+    useMemo(
+      () =>
+        allergiesQuery.data?.find(
+          (allergy) =>
+            allergy.id ===
+            editingId,
+        ) ??
+        null,
+      [
+        allergiesQuery.data,
+        editingId,
+      ],
+    );
+
   function resetForm() {
     setForm(
       initialFormState,
     );
+
+    setDebouncedSearch('');
+    setIsSearchOpen(false);
 
     setIsCreating(false);
     setEditingId(null);
@@ -195,6 +327,9 @@ export function AllergiesCard({
     setForm(
       initialFormState,
     );
+
+    setDebouncedSearch('');
+    setIsSearchOpen(false);
 
     setIsCreating(true);
   }
@@ -209,21 +344,48 @@ export function AllergiesCard({
       allergy.id,
     );
 
-    setForm(
+    const nextForm =
       allergyToFormState(
         allergy,
-      ),
+      );
+
+    setForm(
+      nextForm,
     );
+
+    setDebouncedSearch(
+      nextForm.allergenSearch,
+    );
+
+    setIsSearchOpen(false);
+  }
+
+  function selectAllergen(
+    allergen:
+      AllergenCatalogItem,
+  ) {
+    setForm(
+      (
+        current,
+      ) => ({
+        ...current,
+
+        allergenCatalogId:
+          allergen.id,
+
+        allergenSearch:
+          allergen.name,
+      }),
+    );
+
+    setIsSearchOpen(false);
   }
 
   function createPayload():
   CreateMedicalRecordAllergyInput {
     return {
-      substance:
-        form.substance.trim(),
-
-      type:
-        form.type,
+      allergenCatalogId:
+        form.allergenCatalogId,
 
       reaction:
         form.reaction.trim() ||
@@ -246,48 +408,75 @@ export function AllergiesCard({
     };
   }
 
-  async function handleSave() {
-    if (
-      !form.substance.trim()
-    ) {
-      return;
-    }
+  function updatePayload():
+  UpdateMedicalRecordAllergyInput {
+    return {
+      ...(form.allergenCatalogId
+        ? {
+            allergenCatalogId:
+              form.allergenCatalogId,
+          }
+        : {}),
 
+      reaction:
+        form.reaction.trim() ||
+        null,
+
+      severity:
+        form.severity ||
+        null,
+
+      status:
+        form.status,
+
+      identifiedAt:
+        form.identifiedAt ||
+        null,
+
+      notes:
+        form.notes.trim() ||
+        null,
+    };
+  }
+
+  async function handleSave() {
     if (editingId) {
+      if (
+        !editingAllergy
+      ) {
+        return;
+      }
+
+      const originalSearch =
+        editingAllergy.substance;
+
+      const searchWasChanged =
+        form.allergenSearch.trim() !==
+        originalSearch.trim();
+
+      if (
+        searchWasChanged &&
+        !form.allergenCatalogId
+      ) {
+        return;
+      }
+
       await updateMutation.mutateAsync({
         allergyId:
           editingId,
 
-        input: {
-          substance:
-            form.substance.trim(),
-
-          type:
-            form.type,
-
-          reaction:
-            form.reaction.trim() ||
-            null,
-
-          severity:
-            form.severity ||
-            null,
-
-          status:
-            form.status,
-
-          identifiedAt:
-            form.identifiedAt ||
-            null,
-
-          notes:
-            form.notes.trim() ||
-            null,
-        },
+        input:
+          updatePayload(),
       });
 
       resetForm();
 
+      return;
+    }
+
+    if (
+      !form.allergenCatalogId
+    ) {
       return;
     }
 
@@ -299,11 +488,12 @@ export function AllergiesCard({
   }
 
   async function handleDelete(
-    allergyId: string,
+    allergy:
+      MedicalRecordAllergy,
   ) {
     const confirmed =
       window.confirm(
-        'Deseja realmente excluir esta alergia?',
+        `Deseja realmente excluir a alergia "${allergy.substance}"?`,
       );
 
     if (!confirmed) {
@@ -311,12 +501,12 @@ export function AllergiesCard({
     }
 
     await deleteMutation.mutateAsync(
-      allergyId,
+      allergy.id,
     );
 
     if (
       editingId ===
-      allergyId
+      allergy.id
     ) {
       resetForm();
     }
@@ -325,6 +515,438 @@ export function AllergiesCard({
   const isSaving =
     createMutation.isPending ||
     updateMutation.isPending;
+
+  function renderAllergenSearch(
+    mode:
+      | 'create'
+      | 'edit',
+  ) {
+    const results =
+      catalogQuery.data ??
+      [];
+
+    const hasSearch =
+      debouncedSearch
+        .trim()
+        .length >= 2;
+
+    return (
+      <div className="relative space-y-1.5">
+        <span className="text-sm font-medium">
+          Alérgeno *
+        </span>
+
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground" />
+
+          <input
+            value={
+              form.allergenSearch
+            }
+            onFocus={() =>
+              setIsSearchOpen(
+                true,
+              )
+            }
+            onChange={(
+              event,
+            ) => {
+              const value =
+                event.target.value;
+
+              setForm(
+                (
+                  current,
+                ) => ({
+                  ...current,
+
+                  allergenSearch:
+                    value,
+
+                  allergenCatalogId:
+                    '',
+                }),
+              );
+
+              setIsSearchOpen(
+                true,
+              );
+            }}
+            placeholder="Busque por alérgeno, substância ou sinônimo. Ex.: poeira, ácaro, penicilina"
+            autoComplete="off"
+            className="h-10 w-full rounded-md border bg-background pl-10 pr-3 text-sm"
+          />
+        </div>
+
+        {form.allergenCatalogId && (
+          <p className="flex items-center gap-1 text-xs text-primary">
+            <Check className="size-3.5" />
+            Alérgeno canônico selecionado
+          </p>
+        )}
+
+        {isSearchOpen &&
+          hasSearch && (
+            <div className="absolute z-50 mt-1 max-h-80 w-full overflow-y-auto rounded-lg border bg-background shadow-lg">
+              {catalogQuery.isLoading && (
+                <p className="p-4 text-sm text-muted-foreground">
+                  Pesquisando catálogo de alérgenos...
+                </p>
+              )}
+
+              {catalogQuery.isError && (
+                <p className="p-4 text-sm text-destructive">
+                  Não foi possível pesquisar o catálogo de alérgenos.
+                </p>
+              )}
+
+              {!catalogQuery.isLoading &&
+                !catalogQuery.isError &&
+                results.length ===
+                  0 && (
+                  <p className="p-4 text-sm text-muted-foreground">
+                    Nenhum alérgeno encontrado.
+                  </p>
+                )}
+
+              {results.map(
+                (
+                  allergen,
+                ) => {
+                  const primaryCode =
+                    getPrimaryCode(
+                      allergen,
+                    );
+
+                  const synonyms =
+                    getSynonyms(
+                      allergen,
+                    );
+
+                  return (
+                    <button
+                      key={
+                        allergen.id
+                      }
+                      type="button"
+                      className="flex w-full flex-col gap-1 border-b px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-muted"
+                      onClick={() =>
+                        selectAllergen(
+                          allergen,
+                        )
+                      }
+                    >
+                      <span className="font-medium">
+                        {
+                          allergen.name
+                        }
+                      </span>
+
+                      <span className="text-xs text-muted-foreground">
+                        Tipo:{' '}
+                        {
+                          allergenCatalogTypeLabels[
+                            allergen.type
+                          ]
+                        }
+                      </span>
+
+                      {synonyms.length >
+                        0 && (
+                        <span className="text-xs text-muted-foreground">
+                          Sinônimos:{' '}
+                          {synonyms
+                            .slice(
+                              0,
+                              4,
+                            )
+                            .join(
+                              ', ',
+                            )}
+                        </span>
+                      )}
+
+                      {primaryCode && (
+                        <span className="text-xs text-muted-foreground">
+                          {
+                            primaryCode
+                          }
+                        </span>
+                      )}
+
+                      {allergen.description && (
+                        <span className="text-xs text-muted-foreground">
+                          {
+                            allergen.description
+                          }
+                        </span>
+                      )}
+                    </button>
+                  );
+                },
+              )}
+            </div>
+          )}
+
+        {mode === 'create' &&
+          !form.allergenCatalogId &&
+          form.allergenSearch
+            .trim()
+            .length > 0 && (
+            <p className="text-xs text-muted-foreground">
+              Selecione um alérgeno encontrado no catálogo para continuar.
+            </p>
+          )}
+
+        {mode === 'edit' &&
+          editingAllergy &&
+          !editingAllergy.allergenCatalogId &&
+          form.allergenSearch ===
+            editingAllergy.substance && (
+            <p className="text-xs text-muted-foreground">
+              Registro legado. Você pode manter os dados atuais ou selecionar um alérgeno do catálogo para padronizá-lo.
+            </p>
+          )}
+      </div>
+    );
+  }
+
+  function renderForm(
+    mode:
+      | 'create'
+      | 'edit',
+  ) {
+    const originalSearch =
+      editingAllergy
+        ?.substance ??
+      '';
+
+    const searchWasChanged =
+      mode === 'edit' &&
+      form.allergenSearch.trim() !==
+        originalSearch.trim();
+
+    const canSave =
+      mode === 'create'
+        ? Boolean(
+            form.allergenCatalogId,
+          )
+        : !searchWasChanged ||
+          Boolean(
+            form.allergenCatalogId,
+          );
+
+    return (
+      <div className="grid gap-4 sm:grid-cols-2">
+        {renderAllergenSearch(
+          mode,
+        )}
+
+        <label className="space-y-1.5">
+          <span className="text-sm font-medium">
+            Reação
+          </span>
+
+          <input
+            value={
+              form.reaction
+            }
+            onChange={(event) =>
+              setForm(
+                (
+                  current,
+                ) => ({
+                  ...current,
+
+                  reaction:
+                    event.target
+                      .value,
+                }),
+              )
+            }
+            placeholder="Ex.: Urticária"
+            className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+          />
+        </label>
+
+        <label className="space-y-1.5">
+          <span className="text-sm font-medium">
+            Gravidade
+          </span>
+
+          <select
+            value={
+              form.severity
+            }
+            onChange={(event) =>
+              setForm(
+                (
+                  current,
+                ) => ({
+                  ...current,
+
+                  severity:
+                    event.target
+                      .value as
+                      | AllergySeverity
+                      | '',
+                }),
+              )
+            }
+            className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+          >
+            <option value="">
+              Não informada
+            </option>
+
+            {Object.entries(
+              severityLabels,
+            ).map(
+              ([
+                value,
+                label,
+              ]) => (
+                <option
+                  key={value}
+                  value={value}
+                >
+                  {label}
+                </option>
+              ),
+            )}
+          </select>
+        </label>
+
+        <label className="space-y-1.5">
+          <span className="text-sm font-medium">
+            Status
+          </span>
+
+          <select
+            value={
+              form.status
+            }
+            onChange={(event) =>
+              setForm(
+                (
+                  current,
+                ) => ({
+                  ...current,
+
+                  status:
+                    event.target
+                      .value as AllergyStatus,
+                }),
+              )
+            }
+            className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+          >
+            {Object.entries(
+              statusLabels,
+            ).map(
+              ([
+                value,
+                label,
+              ]) => (
+                <option
+                  key={value}
+                  value={value}
+                >
+                  {label}
+                </option>
+              ),
+            )}
+          </select>
+        </label>
+
+        <label className="space-y-1.5">
+          <span className="text-sm font-medium">
+            Data de identificação
+          </span>
+
+          <input
+            type="date"
+            value={
+              form.identifiedAt
+            }
+            onChange={(event) =>
+              setForm(
+                (
+                  current,
+                ) => ({
+                  ...current,
+
+                  identifiedAt:
+                    event.target
+                      .value,
+                }),
+              )
+            }
+            className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+          />
+        </label>
+
+        <label className="space-y-1.5 sm:col-span-2">
+          <span className="text-sm font-medium">
+            Observações
+          </span>
+
+          <input
+            value={
+              form.notes
+            }
+            onChange={(event) =>
+              setForm(
+                (
+                  current,
+                ) => ({
+                  ...current,
+
+                  notes:
+                    event.target
+                      .value,
+                }),
+              )
+            }
+            placeholder="Informações complementares"
+            className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+          />
+        </label>
+
+        <div className="flex justify-end gap-2 sm:col-span-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={
+              resetForm
+            }
+            disabled={
+              isSaving
+            }
+          >
+            Cancelar
+          </Button>
+
+          <Button
+            type="button"
+            onClick={() =>
+              void handleSave()
+            }
+            disabled={
+              isSaving ||
+              !canSave
+            }
+          >
+            {isSaving
+              ? 'Salvando...'
+              : mode === 'create'
+                ? 'Salvar alergia'
+                : 'Salvar alterações'}
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Card>
@@ -338,9 +960,7 @@ export function AllergiesCard({
             </CardTitle>
 
             <p className="mt-1 text-sm text-muted-foreground">
-              Alergias, reações e
-              sensibilidades conhecidas
-              do paciente.
+              Alergias, reações e sensibilidades conhecidas do paciente.
             </p>
           </div>
 
@@ -369,8 +989,7 @@ export function AllergiesCard({
         {allergiesQuery.isError && (
           <div className="space-y-3">
             <p className="text-sm text-destructive">
-              Não foi possível
-              carregar as alergias.
+              Não foi possível carregar as alergias.
             </p>
 
             <Button
@@ -391,21 +1010,34 @@ export function AllergiesCard({
             ?.length === 0 &&
           !isCreating && (
             <p className="text-sm text-muted-foreground">
-              Nenhuma alergia
-              registrada.
+              Nenhuma alergia registrada.
             </p>
           )}
 
+        {isCreating && (
+          <div className="rounded-xl border p-4">
+            {renderForm(
+              'create',
+            )}
+          </div>
+        )}
+
         {allergiesQuery.data?.map(
-          (allergy) => (
+          (
+            allergy,
+          ) => (
             <div
               key={
                 allergy.id
               }
               className="rounded-xl border p-4"
             >
-              {editingId !==
+              {editingId ===
               allergy.id ? (
+                renderForm(
+                  'edit',
+                )
+              ) : (
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
@@ -418,8 +1050,7 @@ export function AllergiesCard({
                       <span className="rounded-full border px-2 py-0.5 text-xs text-muted-foreground">
                         {
                           allergyTypeLabels[
-                            allergy
-                              .type
+                            allergy.type
                           ]
                         }
                       </span>
@@ -427,8 +1058,7 @@ export function AllergiesCard({
                       <span className="rounded-full border px-2 py-0.5 text-xs text-muted-foreground">
                         {
                           statusLabels[
-                            allergy
-                              .status
+                            allergy.status
                           ]
                         }
                       </span>
@@ -437,10 +1067,15 @@ export function AllergiesCard({
                         <span className="rounded-full border px-2 py-0.5 text-xs text-muted-foreground">
                           {
                             severityLabels[
-                              allergy
-                                .severity
+                              allergy.severity
                             ]
                           }
+                        </span>
+                      )}
+
+                      {allergy.allergenCatalogId && (
+                        <span className="rounded-full border px-2 py-0.5 text-xs text-primary">
+                          Padronizada
                         </span>
                       )}
                     </div>
@@ -482,6 +1117,7 @@ export function AllergiesCard({
                           allergy,
                         )
                       }
+                      aria-label="Editar alergia"
                     >
                       <Pencil className="size-4" />
                     </Button>
@@ -494,347 +1130,29 @@ export function AllergiesCard({
                         deleteMutation.isPending
                       }
                       onClick={() =>
-                        handleDelete(
-                          allergy.id,
+                        void handleDelete(
+                          allergy,
                         )
                       }
+                      aria-label="Excluir alergia"
                     >
                       <Trash2 className="size-4" />
                     </Button>
                   </div>
                 </div>
-              ) : (
-                <AllergyForm
-                  form={form}
-                  setForm={
-                    setForm
-                  }
-                  isSaving={
-                    isSaving
-                  }
-                  onCancel={
-                    resetForm
-                  }
-                  onSave={
-                    handleSave
-                  }
-                  submitLabel="Salvar alterações"
-                />
               )}
             </div>
           ),
         )}
 
-        {isCreating && (
-          <div className="rounded-xl border p-4">
-            <AllergyForm
-              form={form}
-              setForm={
-                setForm
-              }
-              isSaving={
-                isSaving
-              }
-              onCancel={
-                resetForm
-              }
-              onSave={
-                handleSave
-              }
-              submitLabel="Salvar alergia"
-            />
-          </div>
+        {(createMutation.isError ||
+          updateMutation.isError ||
+          deleteMutation.isError) && (
+          <p className="text-sm text-destructive">
+            Não foi possível concluir a operação. Tente novamente.
+          </p>
         )}
       </CardContent>
     </Card>
-  );
-}
-
-interface AllergyFormProps {
-  form: AllergyFormState;
-
-  setForm:
-    React.Dispatch<
-      React.SetStateAction<
-        AllergyFormState
-      >
-    >;
-
-  isSaving: boolean;
-  onCancel: () => void;
-  onSave: () => void;
-
-  submitLabel: string;
-}
-
-function AllergyForm({
-  form,
-  setForm,
-  isSaving,
-  onCancel,
-  onSave,
-  submitLabel,
-}: AllergyFormProps) {
-  return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      <label className="space-y-1.5">
-        <span className="text-sm font-medium">
-          Substância *
-        </span>
-
-        <input
-          value={
-            form.substance
-          }
-          onChange={(event) =>
-            setForm(
-              (
-                current,
-              ) => ({
-                ...current,
-                substance:
-                  event.target
-                    .value,
-              }),
-            )
-          }
-          placeholder="Ex.: Penicilina"
-          className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-        />
-      </label>
-
-      <label className="space-y-1.5">
-        <span className="text-sm font-medium">
-          Tipo
-        </span>
-
-        <select
-          value={form.type}
-          onChange={(event) =>
-            setForm(
-              (
-                current,
-              ) => ({
-                ...current,
-                type:
-                  event.target
-                    .value as AllergyType,
-              }),
-            )
-          }
-          className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-        >
-          {Object.entries(
-            allergyTypeLabels,
-          ).map(
-            ([
-              value,
-              label,
-            ]) => (
-              <option
-                key={value}
-                value={value}
-              >
-                {label}
-              </option>
-            ),
-          )}
-        </select>
-      </label>
-
-      <label className="space-y-1.5">
-        <span className="text-sm font-medium">
-          Reação
-        </span>
-
-        <input
-          value={
-            form.reaction
-          }
-          onChange={(event) =>
-            setForm(
-              (
-                current,
-              ) => ({
-                ...current,
-                reaction:
-                  event.target
-                    .value,
-              }),
-            )
-          }
-          placeholder="Ex.: Urticária"
-          className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-        />
-      </label>
-
-      <label className="space-y-1.5">
-        <span className="text-sm font-medium">
-          Gravidade
-        </span>
-
-        <select
-          value={
-            form.severity
-          }
-          onChange={(event) =>
-            setForm(
-              (
-                current,
-              ) => ({
-                ...current,
-                severity:
-                  event.target
-                    .value as
-                    | AllergySeverity
-                    | '',
-              }),
-            )
-          }
-          className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-        >
-          <option value="">
-            Não informada
-          </option>
-
-          {Object.entries(
-            severityLabels,
-          ).map(
-            ([
-              value,
-              label,
-            ]) => (
-              <option
-                key={value}
-                value={value}
-              >
-                {label}
-              </option>
-            ),
-          )}
-        </select>
-      </label>
-
-      <label className="space-y-1.5">
-        <span className="text-sm font-medium">
-          Status
-        </span>
-
-        <select
-          value={
-            form.status
-          }
-          onChange={(event) =>
-            setForm(
-              (
-                current,
-              ) => ({
-                ...current,
-                status:
-                  event.target
-                    .value as AllergyStatus,
-              }),
-            )
-          }
-          className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-        >
-          {Object.entries(
-            statusLabels,
-          ).map(
-            ([
-              value,
-              label,
-            ]) => (
-              <option
-                key={value}
-                value={value}
-              >
-                {label}
-              </option>
-            ),
-          )}
-        </select>
-      </label>
-
-      <label className="space-y-1.5">
-        <span className="text-sm font-medium">
-          Data de identificação
-        </span>
-
-        <input
-          type="date"
-          value={
-            form.identifiedAt
-          }
-          onChange={(event) =>
-            setForm(
-              (
-                current,
-              ) => ({
-                ...current,
-                identifiedAt:
-                  event.target
-                    .value,
-              }),
-            )
-          }
-          className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-        />
-      </label>
-
-      <label className="space-y-1.5 sm:col-span-2">
-        <span className="text-sm font-medium">
-          Observações
-        </span>
-
-        <input
-          value={form.notes}
-          onChange={(event) =>
-            setForm(
-              (
-                current,
-              ) => ({
-                ...current,
-                notes:
-                  event.target
-                    .value,
-              }),
-            )
-          }
-          placeholder="Informações complementares"
-          className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-        />
-      </label>
-
-      <div className="flex justify-end gap-2 sm:col-span-2">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={
-            onCancel
-          }
-          disabled={
-            isSaving
-          }
-        >
-          Cancelar
-        </Button>
-
-        <Button
-          type="button"
-          onClick={
-            onSave
-          }
-          disabled={
-            isSaving ||
-            !form.substance.trim()
-          }
-        >
-          {isSaving
-            ? 'Salvando...'
-            : submitLabel}
-        </Button>
-      </div>
-    </div>
   );
 }

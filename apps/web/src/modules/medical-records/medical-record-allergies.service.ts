@@ -1,11 +1,13 @@
 import {
   apiRequest,
 } from '@/lib/api/api-client';
+
 import {
   authStorage,
 } from '@/lib/auth/auth-storage';
 
 import type {
+  AllergenCatalogItem,
   CreateMedicalRecordAllergyInput,
   MedicalRecordAllergy,
   UpdateMedicalRecordAllergyInput,
@@ -22,6 +24,29 @@ function getAccessToken(): string {
   }
 
   return accessToken;
+}
+
+export async function searchAllergens(
+  query: string,
+  limit = 20,
+): Promise<AllergenCatalogItem[]> {
+  const params =
+    new URLSearchParams({
+      q: query,
+      limit:
+        String(limit),
+    });
+
+  return apiRequest<
+    AllergenCatalogItem[]
+  >(
+    `/allergen-catalog/search?${params.toString()}`,
+    {
+      method: 'GET',
+      accessToken:
+        getAccessToken(),
+    },
+  );
 }
 
 export async function listAllergies(
@@ -82,7 +107,7 @@ export async function deleteAllergy(
   patientId: string,
   allergyId: string,
 ): Promise<void> {
-  return apiRequest<void>(
+  return apiRequest(
     `/patients/${patientId}/medical-record/allergies/${allergyId}`,
     {
       method: 'DELETE',

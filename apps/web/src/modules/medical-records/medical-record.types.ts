@@ -195,6 +195,59 @@ export interface MedicationCatalogItem {
   externalCodes: MedicationCatalogExternalCode[];
 }
 
+// -----------------------------------------------------------------------------
+// ALLERGEN CATALOG
+// -----------------------------------------------------------------------------
+
+export type AllergenCatalogType =
+  | 'MEDICATION'
+  | 'ACTIVE_INGREDIENT'
+  | 'FOOD'
+  | 'ENVIRONMENTAL'
+  | 'CONTACT'
+  | 'BIOLOGICAL'
+  | 'CHEMICAL'
+  | 'OTHER';
+
+export type AllergenTerminologySystem =
+  | 'SNOMED_CT'
+  | 'RXNORM'
+  | 'UNII'
+  | 'OTHER';
+
+export interface AllergenCatalogSynonym {
+  id: string;
+  term: string;
+  normalizedTerm: string;
+}
+
+export interface AllergenCatalogExternalCode {
+  id: string;
+  system: AllergenTerminologySystem;
+  code: string;
+  display: string | null;
+  version: string | null;
+  isPrimary: boolean;
+}
+
+export interface AllergenCatalogItem {
+  id: string;
+  name: string;
+  normalizedName: string;
+
+  type: AllergenCatalogType;
+
+  description: string | null;
+  isActive: boolean;
+
+  synonyms: AllergenCatalogSynonym[];
+  externalCodes: AllergenCatalogExternalCode[];
+}
+
+// -----------------------------------------------------------------------------
+// MEDICAL RECORD ALLERGIES
+// -----------------------------------------------------------------------------
+
 export type AllergyType =
   | 'MEDICATION'
   | 'FOOD'
@@ -219,6 +272,8 @@ export interface MedicalRecordAllergy {
   medicalRecordId: string;
   patientId: string;
 
+  allergenCatalogId: string | null;
+
   substance: string;
   type: AllergyType;
 
@@ -234,8 +289,7 @@ export interface MedicalRecordAllergy {
 }
 
 export interface CreateMedicalRecordAllergyInput {
-  substance: string;
-  type: AllergyType;
+  allergenCatalogId: string;
 
   reaction?: string;
   severity?: AllergySeverity;
@@ -246,8 +300,7 @@ export interface CreateMedicalRecordAllergyInput {
 }
 
 export interface UpdateMedicalRecordAllergyInput {
-  substance?: string;
-  type?: AllergyType;
+  allergenCatalogId?: string;
 
   reaction?: string | null;
   severity?: AllergySeverity | null;
