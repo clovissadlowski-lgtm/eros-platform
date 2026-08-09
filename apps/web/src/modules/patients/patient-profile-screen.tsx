@@ -23,8 +23,20 @@ import {
 } from '@/components/ui/skeleton';
 
 import {
+  HealthConditionsCard,
+} from '@/modules/medical-records/health-conditions-card';
+
+import {
+  MedicationsCard,
+} from '@/modules/medical-records/medications-card';
+
+import {
   usePatient,
 } from './hooks/use-patient';
+
+import {
+  AllergiesCard,
+} from '@/modules/medical-records/allergies-card';
 
 interface PatientProfileScreenProps {
   patientId: string;
@@ -59,9 +71,24 @@ export function PatientProfileScreen({
   ) {
     return (
       <div className="space-y-6">
-        <Skeleton className="h-10 w-72" />
-        <Skeleton className="h-48 w-full rounded-xl" />
-        <Skeleton className="h-48 w-full rounded-xl" />
+        <div className="flex items-center gap-4">
+          <Skeleton className="size-14 rounded-full" />
+
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-64" />
+            <Skeleton className="h-4 w-40" />
+          </div>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-3">
+          <Skeleton className="h-52 lg:col-span-2" />
+          <Skeleton className="h-52" />
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Skeleton className="h-36" />
+          <Skeleton className="h-36" />
+        </div>
       </div>
     );
   }
@@ -72,8 +99,8 @@ export function PatientProfileScreen({
   ) {
     return (
       <Card>
-        <CardContent className="flex flex-col items-center gap-4 p-10 text-center">
-          <p className="font-medium">
+        <CardContent className="flex min-h-48 flex-col items-center justify-center gap-4">
+          <p className="text-sm">
             Não foi possível carregar o paciente.
           </p>
 
@@ -95,9 +122,9 @@ export function PatientProfileScreen({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex items-start gap-4">
-          <div className="flex size-14 items-center justify-center rounded-full bg-muted">
+          <div className="flex size-14 shrink-0 items-center justify-center rounded-full bg-muted">
             <UserRound className="size-6 text-muted-foreground" />
           </div>
 
@@ -201,6 +228,24 @@ export function PatientProfileScreen({
           </CardContent>
         </Card>
       </div>
+
+      <HealthConditionsCard
+        patientId={
+          patient.id
+        }
+      />
+
+      <MedicationsCard
+        patientId={
+          patient.id
+        }
+      />
+
+      <AllergiesCard
+        patientId={
+          patient.id
+        }
+      />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
