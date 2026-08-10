@@ -71,6 +71,7 @@ model MedicalRecord {
   healthConditionEntries MedicalRecordHealthCondition[]
   medicationEntries      MedicalRecordMedication[]
   allergyEntries         MedicalRecordAllergy[]
+  laboratoryExams        LaboratoryExam[]
 
   @@unique([organizationId, patientId])
   @@index([organizationId])
@@ -604,6 +605,94 @@ model Session {
   @@map("sessions")
 }
 
+model BiomarkerCatalog {
+  id String @id @default(uuid()) @db.Uuid
+
+  name String @db.VarChar(200)
+
+  code String? @db.VarChar(100)
+
+  defaultUnit String? @db.VarChar(50)
+
+  description String?
+
+  active Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  laboratoryResults LaboratoryResult[]
+
+  @@index([name])
+  @@index([code])
+  @@index([active])
+  @@map("biomarker_catalog")
+}
+
+model LaboratoryExam {
+  id String @id @default(uuid()) @db.Uuid
+
+  organizationId  String @db.Uuid
+  medicalRecordId String @db.Uuid
+  patientId       String @db.Uuid
+
+  name String @db.VarChar(200)
+
+  laboratoryName String? @db.VarChar(200)
+
+  collectedAt DateTime? @db.Date
+  resultedAt  DateTime? @db.Date
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  medicalRecord MedicalRecord @relation(fields: [medicalRecordId], references: [id], onDelete: Cascade)
+
+  results LaboratoryResult[]
+
+  @@index([organizationId])
+  @@index([medicalRecordId])
+  @@index([patientId])
+  @@index([organizationId, patientId])
+  @@index([collectedAt])
+  @@map("laboratory_exams")
+}
+
+model LaboratoryResult {
+  id String @id @default(uuid()) @db.Uuid
+
+  laboratoryExamId String @db.Uuid
+
+  biomarkerCatalogId String? @db.Uuid
+
+  name String @db.VarChar(200)
+
+  value Decimal? @db.Decimal(18, 6)
+
+  textValue String? @db.VarChar(500)
+
+  unit String? @db.VarChar(50)
+
+  referenceRange String? @db.VarChar(200)
+
+  interpretation LaboratoryResultInterpretation?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  laboratoryExam LaboratoryExam @relation(fields: [laboratoryExamId], references: [id], onDelete: Cascade)
+
+  biomarkerCatalog BiomarkerCatalog? @relation(fields: [biomarkerCatalogId], references: [id])
+
+  @@index([laboratoryExamId])
+  @@index([biomarkerCatalogId])
+  @@index([name])
+  @@index([interpretation])
+  @@map("laboratory_results")
+}
+
 enum OrganizationStatus {
   ACTIVE
   INACTIVE
@@ -784,4 +873,14 @@ enum AllergenTerminologySystem {
   RXNORM
   UNII
   OTHER
+}
+
+enum LaboratoryResultInterpretation {
+  LOW
+  NORMAL
+  HIGH
+  CRITICAL_LOW
+  CRITICAL_HIGH
+  ABNORMAL
+  INCONCLUSIVE
 }

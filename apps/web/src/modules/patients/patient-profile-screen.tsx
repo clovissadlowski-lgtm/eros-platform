@@ -23,9 +23,14 @@ import {
 } from '@/components/ui/skeleton';
 
 import {
+  AllergiesCard,
+} from '@/modules/medical-records/allergies-card';
+import {
   HealthConditionsCard,
 } from '@/modules/medical-records/health-conditions-card';
-
+import {
+  LaboratoryExamsCard,
+} from '@/modules/medical-records/laboratory-exams-card';
 import {
   MedicationsCard,
 } from '@/modules/medical-records/medications-card';
@@ -33,10 +38,6 @@ import {
 import {
   usePatient,
 } from './hooks/use-patient';
-
-import {
-  AllergiesCard,
-} from '@/modules/medical-records/allergies-card';
 
 interface PatientProfileScreenProps {
   patientId: string;
@@ -53,7 +54,10 @@ function formatBirthDate(
     year,
     month,
     day,
-  ] = value.split('-');
+  ] =
+    value.split(
+      '-',
+    );
 
   return `${day}/${month}/${year}`;
 }
@@ -99,8 +103,8 @@ export function PatientProfileScreen({
   ) {
     return (
       <Card>
-        <CardContent className="flex min-h-48 flex-col items-center justify-center gap-4">
-          <p className="text-sm">
+        <CardContent className="space-y-4 py-8">
+          <p className="text-sm text-destructive">
             Não foi possível carregar o paciente.
           </p>
 
@@ -122,9 +126,9 @@ export function PatientProfileScreen({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="flex items-start gap-4">
-          <div className="flex size-14 shrink-0 items-center justify-center rounded-full bg-muted">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-center gap-4">
+          <div className="flex size-14 items-center justify-center rounded-full bg-muted">
             <UserRound className="size-6 text-muted-foreground" />
           </div>
 
@@ -153,6 +157,7 @@ export function PatientProfileScreen({
           className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow-xs transition hover:bg-primary/90"
         >
           <Stethoscope className="size-4" />
+
           Abrir prontuário
         </Link>
       </div>
@@ -242,6 +247,12 @@ export function PatientProfileScreen({
       />
 
       <AllergiesCard
+        patientId={
+          patient.id
+        }
+      />
+
+      <LaboratoryExamsCard
         patientId={
           patient.id
         }

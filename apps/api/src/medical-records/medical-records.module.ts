@@ -11,6 +11,10 @@ import {
 } from '../allergen-catalog/allergen-catalog.module';
 
 import {
+  BiomarkerCatalogModule,
+} from '../biomarker-catalog/biomarker-catalog.module';
+
+import {
   ClinicalCatalogModule,
 } from '../clinical-catalog/clinical-catalog.module';
 
@@ -25,6 +29,10 @@ import {
 import {
   PatientsModule,
 } from '../patients/patients.module';
+
+import {
+  LaboratoryExamsService,
+} from './application/services/laboratory-exams.service';
 
 import {
   MedicalRecordAllergiesService,
@@ -43,6 +51,10 @@ import {
 } from './application/services/medical-records.service';
 
 import {
+  LaboratoryExamsRepository,
+} from './domain/repositories/laboratory-exams.repository';
+
+import {
   MedicalRecordAllergiesRepository,
 } from './domain/repositories/medical-record-allergies.repository';
 
@@ -59,6 +71,10 @@ import {
 } from './domain/repositories/medical-records.repository';
 
 import {
+  PrismaLaboratoryExamsRepository,
+} from './infrastructure/repositories/prisma-laboratory-exams.repository';
+
+import {
   PrismaMedicalRecordAllergiesRepository,
 } from './infrastructure/repositories/prisma-medical-record-allergies.repository';
 
@@ -73,6 +89,10 @@ import {
 import {
   PrismaMedicalRecordsRepository,
 } from './infrastructure/repositories/prisma-medical-records.repository';
+
+import {
+  LaboratoryExamsController,
+} from './presentation/controllers/laboratory-exams.controller';
 
 import {
   MedicalRecordAllergiesController,
@@ -98,6 +118,7 @@ import {
     ClinicalCatalogModule,
     MedicationCatalogModule,
     AllergenCatalogModule,
+    BiomarkerCatalogModule,
   ],
 
   controllers: [
@@ -105,6 +126,7 @@ import {
     MedicalRecordHealthConditionsController,
     MedicalRecordMedicationsController,
     MedicalRecordAllergiesController,
+    LaboratoryExamsController,
   ],
 
   providers: [
@@ -112,6 +134,7 @@ import {
     MedicalRecordHealthConditionsService,
     MedicalRecordMedicationsService,
     MedicalRecordAllergiesService,
+    LaboratoryExamsService,
 
     {
       provide:
@@ -144,6 +167,14 @@ import {
       useClass:
         PrismaMedicalRecordAllergiesRepository,
     },
+
+    {
+      provide:
+        LaboratoryExamsRepository,
+
+      useClass:
+        PrismaLaboratoryExamsRepository,
+    },
   ],
 
   exports: [
@@ -151,11 +182,13 @@ import {
     MedicalRecordHealthConditionsService,
     MedicalRecordMedicationsService,
     MedicalRecordAllergiesService,
+    LaboratoryExamsService,
 
     MedicalRecordsRepository,
     MedicalRecordHealthConditionsRepository,
     MedicalRecordMedicationsRepository,
     MedicalRecordAllergiesRepository,
+    LaboratoryExamsRepository,
   ],
 })
 export class MedicalRecordsModule {}

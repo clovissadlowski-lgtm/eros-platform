@@ -309,3 +309,151 @@ export interface UpdateMedicalRecordAllergyInput {
   identifiedAt?: string | null;
   notes?: string | null;
 }
+
+// -----------------------------------------------------------------------------
+// BIOMARKER CATALOG
+// -----------------------------------------------------------------------------
+
+export interface BiomarkerCatalogItem {
+  id: string;
+
+  name: string;
+
+  code: string | null;
+
+  defaultUnit: string | null;
+
+  description: string | null;
+
+  active: boolean;
+
+  createdAt: string;
+
+  updatedAt: string;
+}
+
+// -----------------------------------------------------------------------------
+// LABORATORY EXAMS
+// -----------------------------------------------------------------------------
+
+export type LaboratoryResultInterpretation =
+  | 'LOW'
+  | 'NORMAL'
+  | 'HIGH'
+  | 'CRITICAL_LOW'
+  | 'CRITICAL_HIGH'
+  | 'ABNORMAL'
+  | 'INCONCLUSIVE';
+
+export interface LaboratoryExam {
+  id: string;
+
+  organizationId: string;
+
+  medicalRecordId: string;
+
+  patientId: string;
+
+  name: string;
+
+  laboratoryName: string | null;
+
+  collectedAt: string | null;
+
+  resultedAt: string | null;
+
+  notes: string | null;
+
+  createdAt: string;
+
+  updatedAt: string;
+}
+
+export interface LaboratoryResult {
+  id: string;
+
+  laboratoryExamId: string;
+
+  biomarkerCatalogId: string | null;
+
+  name: string;
+
+  value: string | null;
+
+  textValue: string | null;
+
+  unit: string | null;
+
+  referenceRange: string | null;
+
+  interpretation:
+    LaboratoryResultInterpretation | null;
+
+  createdAt: string;
+
+  updatedAt: string;
+}
+
+export interface LaboratoryExamWithResults {
+  exam: LaboratoryExam;
+
+  results: LaboratoryResult[];
+}
+
+export interface CreateLaboratoryExamInput {
+  name: string;
+
+  laboratoryName?: string;
+
+  collectedAt?: string;
+
+  resultedAt?: string;
+
+  notes?: string;
+}
+
+export interface UpdateLaboratoryExamInput {
+  name?: string;
+
+  laboratoryName?: string | null;
+
+  collectedAt?: string | null;
+
+  resultedAt?: string | null;
+
+  notes?: string | null;
+}
+
+export interface CreateLaboratoryResultInput {
+  biomarkerCatalogId?: string;
+
+  name?: string;
+
+  value?: string;
+
+  textValue?: string;
+
+  unit?: string;
+
+  referenceRange?: string;
+
+  interpretation?:
+    LaboratoryResultInterpretation;
+}
+
+export interface UpdateLaboratoryResultInput {
+  biomarkerCatalogId?: string;
+
+  name?: string;
+
+  value?: string | null;
+
+  textValue?: string | null;
+
+  unit?: string | null;
+
+  referenceRange?: string | null;
+
+  interpretation?:
+    LaboratoryResultInterpretation | null;
+}
