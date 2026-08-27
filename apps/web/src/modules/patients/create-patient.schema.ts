@@ -1,50 +1,123 @@
-import { z } from 'zod';
+import {
+  z,
+} from 'zod';
 
-export const createPatientSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(
-      2,
-      'Informe pelo menos 2 caracteres.',
-    )
-    .max(
-      120,
-      'O nome deve ter no máximo 120 caracteres.',
-    ),
-
-  email: z
-    .union([
-      z.literal(''),
+export const createPatientSchema =
+  z.object({
+    name:
       z
         .string()
-        .email(
-          'Informe um e-mail válido.',
+        .trim()
+        .min(
+          2,
+          'Informe o nome completo do paciente.',
+        )
+        .max(
+          120,
+          'O nome deve ter no máximo 120 caracteres.',
         ),
-    ]),
 
-  phone: z
-    .union([
-      z.literal(''),
+    cpf:
       z
         .string()
-        .regex(
-          /^\+?[0-9]{8,20}$/,
-          'Informe entre 8 e 20 dígitos.',
-        ),
-    ]),
+        .trim()
+        .refine(
+          (
+            value,
+          ) => {
+            if (
+              value.length ===
+              0
+            ) {
+              return true;
+            }
 
-  birthDate: z
-    .union([
-      z.literal(''),
+            const digits =
+              value.replace(
+                /\D/g,
+                '',
+              );
+
+            return (
+              digits.length ===
+              11
+            );
+          },
+          {
+            message:
+              'Informe um CPF com 11 dígitos.',
+          },
+        ),
+
+    email:
       z
         .string()
-        .regex(
-          /^\d{4}-\d{2}-\d{2}$/,
-          'Informe uma data válida.',
+        .trim()
+        .refine(
+          (
+            value,
+          ) =>
+            value.length === 0 ||
+            z.string()
+              .email()
+              .safeParse(
+                value,
+              )
+              .success,
+          {
+            message:
+              'Informe um e-mail válido.',
+          },
         ),
-    ]),
-});
+
+    phone:
+      z
+        .string()
+        .trim()
+        .refine(
+          (
+            value,
+          ) =>
+            value.length === 0 ||
+            /^\+?[0-9]{8,20}$/.test(
+              value,
+            ),
+          {
+            message:
+              'Informe um telefone com 8 a 20 dígitos.',
+          },
+        ),
+
+    birthDate:
+      z
+        .string()
+        .refine(
+          (
+            value,
+          ) =>
+            value.length === 0 ||
+            /^\d{4}-\d{2}-\d{2}$/.test(
+              value,
+            ),
+          {
+            message:
+              'Informe uma data de nascimento válida.',
+          },
+        ),
+
+    biologicalSex:
+      z.union([
+        z.literal(
+          '',
+        ),
+        z.literal(
+          'MALE',
+        ),
+        z.literal(
+          'FEMALE',
+        ),
+      ]),
+  });
 
 export type CreatePatientFormData =
   z.infer<

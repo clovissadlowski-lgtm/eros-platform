@@ -1,56 +1,55 @@
-﻿import { Patient } from '../../domain/entities/patient.entity';
-import { PatientsRepository } from '../../domain/repositories/patients.repository';
+﻿import {
+  Patient,
+} from '../../domain/entities/patient.entity';
+
+import {
+  PatientsRepository,
+} from '../../domain/repositories/patients.repository';
 
 export class InMemoryPatientsRepository
   implements PatientsRepository
 {
-  private readonly patients: Patient[] = [];
+  public readonly items:
+    Patient[] = [];
 
   async create(
     patient: Patient,
   ): Promise<Patient> {
-    const storedPatient = {
-      ...patient,
-    };
+    this.items.push(
+      patient,
+    );
 
-    this.patients.push(storedPatient);
-
-    return {
-      ...storedPatient,
-    };
+    return patient;
   }
 
   async listByOrganization(
     organizationId: string,
   ): Promise<Patient[]> {
-    return this.patients
-      .filter(
-        (patient) =>
-          patient.organizationId ===
-          organizationId,
-      )
-      .map((patient) => ({
-        ...patient,
-      }));
+    return this.items.filter(
+      (
+        patient,
+      ) =>
+        patient.organizationId ===
+        organizationId,
+    );
   }
 
   async findById(
     organizationId: string,
     patientId: string,
   ): Promise<Patient | null> {
-    const patient =
-      this.patients.find(
-        (storedPatient) =>
-          storedPatient.id === patientId &&
-          storedPatient.organizationId ===
-            organizationId,
-      );
-
-    return patient
-      ? {
-          ...patient,
-        }
-      : null;
+    return (
+      this.items.find(
+        (
+          patient,
+        ) =>
+          patient.organizationId ===
+            organizationId &&
+          patient.id ===
+            patientId,
+      ) ??
+      null
+    );
   }
 
   async findByEmail(
@@ -58,52 +57,64 @@ export class InMemoryPatientsRepository
     email: string,
   ): Promise<Patient | null> {
     const normalizedEmail =
-      email.trim().toLowerCase();
+      email
+        .trim()
+        .toLowerCase();
 
-    const patient =
-      this.patients.find(
-        (storedPatient) =>
-          storedPatient.organizationId ===
+    return (
+      this.items.find(
+        (
+          patient,
+        ) =>
+          patient.organizationId ===
             organizationId &&
-          storedPatient.email
-            ?.trim()
-            .toLowerCase() ===
+          patient.email?.toLowerCase() ===
             normalizedEmail,
-      );
+      ) ??
+      null
+    );
+  }
 
-    return patient
-      ? {
-          ...patient,
-        }
-      : null;
+  async findByCpf(
+    organizationId: string,
+    cpf: string,
+  ): Promise<Patient | null> {
+    const normalizedCpf =
+      cpf.trim();
+
+    return (
+      this.items.find(
+        (
+          patient,
+        ) =>
+          patient.organizationId ===
+            organizationId &&
+          patient.cpf ===
+            normalizedCpf,
+      ) ??
+      null
+    );
   }
 
   async update(
     patient: Patient,
   ): Promise<Patient> {
-    const patientIndex =
-      this.patients.findIndex(
-        (storedPatient) =>
-          storedPatient.id === patient.id &&
-          storedPatient.organizationId ===
-            patient.organizationId,
+    const index =
+      this.items.findIndex(
+        (
+          item,
+        ) =>
+          item.id ===
+            patient.id,
       );
 
-    if (patientIndex < 0) {
-      throw new Error(
-        'Patient not found in memory repository.',
-      );
+    if (
+      index >= 0
+    ) {
+      this.items[index] =
+        patient;
     }
 
-    const updatedPatient = {
-      ...patient,
-    };
-
-    this.patients[patientIndex] =
-      updatedPatient;
-
-    return {
-      ...updatedPatient,
-    };
+    return patient;
   }
 }

@@ -39,39 +39,70 @@ export function PatientsScreen() {
     usePatients();
 
   const patients =
-    useMemo(() => {
-      const source =
-        patientsQuery.data ??
-        [];
+  useMemo(() => {
+    const source =
+      patientsQuery.data ??
+      [];
 
-      const normalizedSearch =
-        search
-          .trim()
-          .toLowerCase();
+    const normalizedSearch =
+      search
+        .trim()
+        .toLowerCase();
 
-      if (
-        !normalizedSearch
-      ) {
-        return source;
-      }
+    if (
+      !normalizedSearch
+    ) {
+      return source;
+    }
 
-      return source.filter(
-        (patient) =>
+    const normalizedCpfSearch =
+      normalizedSearch.replace(
+        /\D/g,
+        '',
+      );
+
+    return source.filter(
+      (patient) => {
+        const matchesName =
           patient.name
             .toLowerCase()
             .includes(
               normalizedSearch,
-            ) ||
+            );
+
+        const matchesEmail =
           patient.email
             ?.toLowerCase()
             .includes(
               normalizedSearch,
-            ),
-      );
-    }, [
-      patientsQuery.data,
-      search,
-    ]);
+            ) ??
+          false;
+
+        const matchesCpf =
+          normalizedCpfSearch.length >
+            0 &&
+          patient.cpf
+            ?.replace(
+              /\D/g,
+              '',
+            )
+            .includes(
+              normalizedCpfSearch,
+            );
+
+        return (
+          matchesName ||
+          matchesEmail ||
+          Boolean(
+            matchesCpf,
+          )
+        );
+      },
+    );
+  }, [
+    patientsQuery.data,
+    search,
+  ]);
 
   return (
     <div className="space-y-6">
@@ -110,7 +141,7 @@ export function PatientsScreen() {
                     .value,
                 )
               }
-              placeholder="Buscar por nome ou e-mail..."
+              placeholder="Buscar por nome ou e-mail ou CPF..."
               className="pl-9"
             />
           </div>

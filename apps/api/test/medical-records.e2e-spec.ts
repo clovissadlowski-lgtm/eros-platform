@@ -46,6 +46,46 @@ interface MedicalRecordResponse {
   updatedAt: string;
 }
 
+interface DietaryRestrictionResponse {
+  id: string;
+  organizationId: string;
+  medicalRecordId: string;
+  patientId: string;
+  item: string;
+  type:
+    | 'PREFERENCE'
+    | 'INTOLERANCE'
+    | 'MEDICAL_RESTRICTION'
+    | 'CULTURAL_RELIGIOUS'
+    | 'ETHICAL_LIFESTYLE'
+    | 'OTHER';
+  action:
+    | 'AVOID'
+    | 'LIMIT'
+    | 'MONITOR'
+    | 'KEEP_CONSISTENT'
+    | 'BLOCK';
+  risk:
+    | 'NONE'
+    | 'LOW'
+    | 'MODERATE'
+    | 'HIGH'
+    | 'CRITICAL';
+  source:
+    | 'PATIENT_REPORTED'
+    | 'PROFESSIONAL_REPORTED'
+    | 'SYSTEM_DERIVED';
+  reason: string | null;
+  identifiedAt: string | null;
+  status:
+    | 'ACTIVE'
+    | 'INACTIVE'
+    | 'RESOLVED';
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 describe('Medical Records (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
@@ -69,6 +109,7 @@ describe('Medical Records (e2e)', () => {
   let assistantTenantAccessToken: string;
 
   let medicalRecordId: string;
+  let dietaryRestrictionId: string;
 
   const password =
     'StrongPassword#2026';
@@ -285,6 +326,260 @@ describe('Medical Records (e2e)', () => {
     });
   });
 
+  it('creates a dietary preference for the patient', async () => {
+    const response = await request(
+      app.getHttpServer(),
+    )
+      .post(
+        `/api/patients/${patientId}/medical-record/dietary-restrictions`,
+      )
+      .set(
+        'Authorization',
+        `Bearer ${ownerTenantAccessToken}`,
+      )
+      .send({
+        item:
+          '  Tomate  ',
+        type:
+          'PREFERENCE',
+        action:
+          'AVOID',
+        reason:
+          '  Paciente não gosta de tomate.  ',
+        notes:
+          '  Preferência pessoal, sem risco clínico.  ',
+      })
+      .expect(201);
+
+    const body =
+      response.body as DietaryRestrictionResponse;
+
+    expect(body).toMatchObject({
+      organizationId,
+      medicalRecordId,
+      patientId,
+      item: 'Tomate',
+      type: 'PREFERENCE',
+      action: 'AVOID',
+      risk: 'NONE',
+      source: 'PATIENT_REPORTED',
+      reason:
+        'Paciente não gosta de tomate.',
+      status: 'ACTIVE',
+      notes:
+        'Preferência pessoal, sem risco clínico.',
+    });
+
+    expect(typeof body.id).toBe(
+      'string',
+    );
+
+    dietaryRestrictionId =
+      body.id;
+  });
+
+  it('lists dietary preferences and restrictions from the patient', async () => {
+    const response = await request(
+      app.getHttpServer(),
+    )
+      .get(
+        `/api/patients/${patientId}/medical-record/dietary-restrictions`,
+      )
+      .set(
+        'Authorization',
+        `Bearer ${ownerTenantAccessToken}`,
+      )
+      .expect(200);
+
+    const body =
+      response.body as DietaryRestrictionResponse[];
+
+    expect(
+      Array.isArray(body),
+    ).toBe(true);
+
+    expect(body).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id:
+            dietaryRestrictionId,
+          item:
+            'Tomate',
+          type:
+            'PREFERENCE',
+          action:
+            'AVOID',
+          risk:
+            'NONE',
+          source:
+            'PATIENT_REPORTED',
+          status:
+            'ACTIVE',
+        }),
+      ]),
+    );
+  });
+
+  it('updates a dietary preference into a clinical restriction', async () => {
+    const response = await request(
+      app.getHttpServer(),
+    )
+      .patch(
+        `/api/patients/${patientId}/medical-record/dietary-restrictions/${dietaryRestrictionId}`,
+      )
+      .set(
+        'Authorization',
+        `Bearer ${ownerTenantAccessToken}`,
+      )
+      .send({
+        item:
+          'Glúten',
+        type:
+          'MEDICAL_RESTRICTION',
+        action:
+          'BLOCK',
+        risk:
+          'HIGH',
+        source:
+          'PROFESSIONAL_REPORTED',
+        reason:
+          'Restrição clínica registrada pelo profissional.',
+        notes:
+          'Evitar alimentos que contenham glúten.',
+      })
+      .expect(200);
+
+    const body =
+      response.body as DietaryRestrictionResponse;
+
+    expect(body).toMatchObject({
+      id:
+        dietaryRestrictionId,
+      organizationId,
+      medicalRecordId,
+      patientId,
+      item:
+        'Glúten',
+      type:
+        'MEDICAL_RESTRICTION',
+      action:
+        'BLOCK',
+      risk:
+        'HIGH',
+      source:
+        'PROFESSIONAL_REPORTED',
+      reason:
+        'Restrição clínica registrada pelo profissional.',
+      status:
+        'ACTIVE',
+      notes:
+        'Evitar alimentos que contenham glúten.',
+    });
+  });
+
+  it('rejects an invalid dietary restriction type', async () => {
+    const response = await request(
+      app.getHttpServer(),
+    )
+      .post(
+        `/api/patients/${patientId}/medical-record/dietary-restrictions`,
+      )
+      .set(
+        'Authorization',
+        `Bearer ${ownerTenantAccessToken}`,
+      )
+      .send({
+        item:
+          'Teste inválido',
+        type:
+          'INVALID_TYPE',
+        action:
+          'AVOID',
+      })
+      .expect(400);
+
+    expect(response.body).toMatchObject({
+      statusCode: 400,
+      code: 'VALIDATION_ERROR',
+    });
+  });
+
+  it('rejects an invalid dietary restriction action', async () => {
+    const response = await request(
+      app.getHttpServer(),
+    )
+      .post(
+        `/api/patients/${patientId}/medical-record/dietary-restrictions`,
+      )
+      .set(
+        'Authorization',
+        `Bearer ${ownerTenantAccessToken}`,
+      )
+      .send({
+        item:
+          'Teste inválido',
+        type:
+          'PREFERENCE',
+        action:
+          'INVALID_ACTION',
+      })
+      .expect(400);
+
+    expect(response.body).toMatchObject({
+      statusCode: 400,
+      code: 'VALIDATION_ERROR',
+    });
+  });
+
+  it('rejects SYSTEM_DERIVED source from the external API', async () => {
+    const response = await request(
+      app.getHttpServer(),
+    )
+      .post(
+        `/api/patients/${patientId}/medical-record/dietary-restrictions`,
+      )
+      .set(
+        'Authorization',
+        `Bearer ${ownerTenantAccessToken}`,
+      )
+      .send({
+        item:
+          'Vitamina K',
+        type:
+          'MEDICAL_RESTRICTION',
+        action:
+          'KEEP_CONSISTENT',
+        risk:
+          'HIGH',
+        source:
+          'SYSTEM_DERIVED',
+      })
+      .expect(400);
+
+    expect(response.body).toMatchObject({
+      statusCode: 400,
+      code: 'VALIDATION_ERROR',
+    });
+  });
+
+  it('does not expose dietary restrictions from another organization', async () => {
+    const response = await request(
+      app.getHttpServer(),
+    )
+      .get(
+        `/api/patients/${secondOrganizationPatientId}/medical-record/dietary-restrictions`,
+      )
+      .set(
+        'Authorization',
+        `Bearer ${ownerTenantAccessToken}`,
+      )
+      .expect(404);
+
+    expect(response.body).toMatchObject({
+      statusCode: 404,
+    });
+  });
+
   it('updates only the supplied clinical fields', async () => {
     const response = await request(
       app.getHttpServer(),
@@ -456,6 +751,25 @@ describe('Medical Records (e2e)', () => {
       selectBody.accessToken;
   });
 
+  it('rejects dietary restriction access by an assistant', async () => {
+    const response = await request(
+      app.getHttpServer(),
+    )
+      .get(
+        `/api/patients/${secondOrganizationPatientId}/medical-record/dietary-restrictions`,
+      )
+      .set(
+        'Authorization',
+        `Bearer ${assistantTenantAccessToken}`,
+      )
+      .expect(403);
+
+    expect(response.body).toMatchObject({
+      statusCode: 403,
+      code: 'INSUFFICIENT_ROLE',
+    });
+  });
+
   it('rejects medical record access by an assistant', async () => {
     const response = await request(
       app.getHttpServer(),
@@ -496,6 +810,45 @@ describe('Medical Records (e2e)', () => {
       statusCode: 403,
       code: 'INSUFFICIENT_ROLE',
     });
+  });
+
+  it('deletes a dietary restriction', async () => {
+    await request(
+      app.getHttpServer(),
+    )
+      .delete(
+        `/api/patients/${patientId}/medical-record/dietary-restrictions/${dietaryRestrictionId}`,
+      )
+      .set(
+        'Authorization',
+        `Bearer ${ownerTenantAccessToken}`,
+      )
+      .expect(204);
+
+    const listResponse =
+      await request(
+        app.getHttpServer(),
+      )
+        .get(
+          `/api/patients/${patientId}/medical-record/dietary-restrictions`,
+        )
+        .set(
+          'Authorization',
+          `Bearer ${ownerTenantAccessToken}`,
+        )
+        .expect(200);
+
+    const body =
+      listResponse.body as DietaryRestrictionResponse[];
+
+    expect(body).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id:
+            dietaryRestrictionId,
+        }),
+      ]),
+    );
   });
 
   async function prepareTestData(): Promise<void> {
@@ -644,6 +997,17 @@ describe('Medical Records (e2e)', () => {
           in: [
             ownerUserId,
             assistantUserId,
+          ],
+        },
+      },
+    });
+
+    await prisma.medicalRecordDietaryRestriction.deleteMany({
+      where: {
+        organizationId: {
+          in: [
+            organizationId,
+            secondOrganizationId,
           ],
         },
       },

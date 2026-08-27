@@ -30,19 +30,22 @@ model Organization {
 }
 
 model Patient {
-  id             String         @id @default(uuid()) @db.Uuid
-  organizationId String         @db.Uuid
-  name           String         @db.VarChar(150)
-  email          String?        @db.VarChar(255)
-  phone          String?        @db.VarChar(30)
-  birthDate      DateTime?      @db.Date
-  status         PatientStatus  @default(ACTIVE)
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
+  id             String                @id @default(uuid()) @db.Uuid
+  organizationId String                @db.Uuid
+  name           String                @db.VarChar(150)
+  cpf            String?               @db.VarChar(11)
+  email          String?               @db.VarChar(255)
+  phone          String?               @db.VarChar(30)
+  birthDate      DateTime?             @db.Date
+  biologicalSex  PatientBiologicalSex?
+  status         PatientStatus         @default(ACTIVE)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
   appointments   Appointment[]
   medicalRecord  MedicalRecord?
-  organization   Organization   @relation(fields: [organizationId], references: [id])
+  organization   Organization          @relation(fields: [organizationId], references: [id])
 
+  @@unique([organizationId, cpf])
   @@unique([organizationId, email])
   @@unique([organizationId, id])
   @@index([organizationId])
@@ -68,10 +71,11 @@ model MedicalRecord {
   organization       Organization        @relation(fields: [organizationId], references: [id])
   patient            Patient             @relation(fields: [organizationId, patientId], references: [organizationId, id])
 
-  healthConditionEntries MedicalRecordHealthCondition[]
-  medicationEntries      MedicalRecordMedication[]
-  allergyEntries         MedicalRecordAllergy[]
-  laboratoryExams        LaboratoryExam[]
+  healthConditionEntries    MedicalRecordHealthCondition[]
+  medicationEntries         MedicalRecordMedication[]
+  allergyEntries            MedicalRecordAllergy[]
+  dietaryRestrictionEntries MedicalRecordDietaryRestriction[]
+  laboratoryExams           LaboratoryExam[]
 
   @@unique([organizationId, patientId])
   @@index([organizationId])
@@ -265,6 +269,92 @@ model MedicalRecordAllergy {
   @@index([severity])
   @@index([status])
   @@map("medical_record_allergies")
+}
+
+model MedicalRecordDietaryRestriction {
+  id              String @id @default(uuid()) @db.Uuid
+  organizationId  String @db.Uuid
+  medicalRecordId String @db.Uuid
+  patientId       String @db.Uuid
+
+  dietaryItemCatalogId String? @db.Uuid
+
+  item   String                   @db.VarChar(200)
+  type   DietaryRestrictionType
+  action DietaryRestrictionAction
+  risk   DietaryRestrictionRisk   @default(NONE)
+  source DietaryRestrictionSource @default(PATIENT_REPORTED)
+
+  reason       String?   @db.VarChar(500)
+  identifiedAt DateTime? @db.Date
+
+  status DietaryRestrictionStatus @default(ACTIVE)
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  medicalRecord MedicalRecord @relation(fields: [medicalRecordId], references: [id], onDelete: Cascade)
+
+  dietaryItemCatalog DietaryItemCatalog? @relation(fields: [dietaryItemCatalogId], references: [id])
+
+  @@index([organizationId])
+  @@index([medicalRecordId])
+  @@index([patientId])
+  @@index([dietaryItemCatalogId])
+  @@index([organizationId, patientId])
+  @@index([type])
+  @@index([action])
+  @@index([risk])
+  @@index([status])
+  @@map("medical_record_dietary_restrictions")
+}
+
+model DietaryItemCatalog {
+  id String @id @default(uuid()) @db.Uuid
+
+  name           String @db.VarChar(200)
+  normalizedName String @unique @db.VarChar(200)
+
+  type DietaryItemCatalogType
+
+  category String? @db.VarChar(100)
+
+  description String?
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  synonyms           DietaryItemSynonym[]
+  restrictionEntries MedicalRecordDietaryRestriction[]
+
+  @@index([name])
+  @@index([normalizedName])
+  @@index([type])
+  @@index([category])
+  @@index([isActive])
+  @@map("dietary_item_catalog")
+}
+
+model DietaryItemSynonym {
+  id String @id @default(uuid()) @db.Uuid
+
+  dietaryItemCatalogId String @db.Uuid
+
+  term           String @db.VarChar(200)
+  normalizedTerm String @db.VarChar(200)
+
+  createdAt DateTime @default(now())
+
+  dietaryItemCatalog DietaryItemCatalog @relation(fields: [dietaryItemCatalogId], references: [id], onDelete: Cascade)
+
+  @@unique([dietaryItemCatalogId, normalizedTerm])
+  @@index([normalizedTerm])
+  @@index([dietaryItemCatalogId])
+  @@map("dietary_item_synonyms")
 }
 
 model AllergenCatalog {
@@ -622,11 +712,48 @@ model BiomarkerCatalog {
   updatedAt DateTime @updatedAt
 
   laboratoryResults LaboratoryResult[]
+  referenceRanges   BiomarkerReferenceRange[]
 
   @@index([name])
   @@index([code])
   @@index([active])
   @@map("biomarker_catalog")
+}
+
+model BiomarkerReferenceRange {
+  id String @id @default(uuid()) @db.Uuid
+
+  biomarkerCatalogId String @db.Uuid
+
+  unit String @db.VarChar(50)
+
+  minAgeYears Int?
+  maxAgeYears Int?
+
+  lowerBound Decimal? @db.Decimal(18, 6)
+  upperBound Decimal? @db.Decimal(18, 6)
+
+  sex BiomarkerReferenceSex @default(ANY)
+
+  context BiomarkerReferenceContext @default(GENERAL)
+
+  sourceName String? @db.VarChar(200)
+  sourceUrl  String? @db.VarChar(500)
+  sourceNote String? @db.VarChar(500)
+
+  description String? @db.VarChar(500)
+
+  active Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  biomarkerCatalog BiomarkerCatalog @relation(fields: [biomarkerCatalogId], references: [id], onDelete: Cascade)
+
+  @@index([biomarkerCatalogId])
+  @@index([biomarkerCatalogId, unit])
+  @@index([active])
+  @@map("biomarker_reference_ranges")
 }
 
 model LaboratoryExam {
@@ -642,6 +769,8 @@ model LaboratoryExam {
 
   collectedAt DateTime? @db.Date
   resultedAt  DateTime? @db.Date
+
+  collectionContext BiomarkerReferenceContext?
 
   notes String?
 
@@ -883,4 +1012,66 @@ enum LaboratoryResultInterpretation {
   CRITICAL_HIGH
   ABNORMAL
   INCONCLUSIVE
+}
+
+enum BiomarkerReferenceSex {
+  ANY
+  MALE
+  FEMALE
+}
+
+enum BiomarkerReferenceContext {
+  GENERAL
+  FASTING
+  NON_FASTING
+}
+
+enum PatientBiologicalSex {
+  MALE
+  FEMALE
+}
+
+enum DietaryItemCatalogType {
+  FOOD
+  NUTRIENT
+  COMPONENT
+  INGREDIENT
+  OTHER
+}
+
+enum DietaryRestrictionType {
+  PREFERENCE
+  INTOLERANCE
+  MEDICAL_RESTRICTION
+  CULTURAL_RELIGIOUS
+  ETHICAL_LIFESTYLE
+  OTHER
+}
+
+enum DietaryRestrictionAction {
+  AVOID
+  LIMIT
+  MONITOR
+  KEEP_CONSISTENT
+  BLOCK
+}
+
+enum DietaryRestrictionRisk {
+  NONE
+  LOW
+  MODERATE
+  HIGH
+  CRITICAL
+}
+
+enum DietaryRestrictionSource {
+  PATIENT_REPORTED
+  PROFESSIONAL_REPORTED
+  SYSTEM_DERIVED
+}
+
+enum DietaryRestrictionStatus {
+  ACTIVE
+  INACTIVE
+  RESOLVED
 }

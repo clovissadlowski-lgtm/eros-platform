@@ -1,36 +1,42 @@
 'use client';
 
 import {
-  ArrowLeft,
-  Save,
-  UserRound,
-} from 'lucide-react';
-import {
-  useRouter,
-} from 'next/navigation';
-import {
-  useState,
-} from 'react';
-import {
-  type FieldErrors,
-  useForm,
-} from 'react-hook-form';
-import {
   zodResolver,
 } from '@hookform/resolvers/zod';
 
 import {
+  ArrowLeft,
+  Save,
+  UserRound,
+} from 'lucide-react';
+
+import {
+  useRouter,
+} from 'next/navigation';
+
+import {
+  useState,
+} from 'react';
+
+import {
+  useForm,
+} from 'react-hook-form';
+
+import {
   Button,
 } from '@/components/ui/button';
+
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+
 import {
   Input,
 } from '@/components/ui/input';
+
 import {
   Label,
 } from '@/components/ui/label';
@@ -39,9 +45,86 @@ import {
   createPatientSchema,
   type CreatePatientFormData,
 } from './create-patient.schema';
+
 import {
   useCreatePatient,
 } from './hooks/use-create-patient';
+
+import {
+  getPatientErrorMessage,
+} from './patient-error-message';
+
+function maskCpf(
+  value: string,
+): string {
+  const digits =
+    value
+      .replace(
+        /\D/g,
+        '',
+      )
+      .slice(
+        0,
+        11,
+      );
+
+  if (
+    digits.length <=
+    3
+  ) {
+    return digits;
+  }
+
+  if (
+    digits.length <=
+    6
+  ) {
+    return `${digits.slice(
+      0,
+      3,
+    )}.${digits.slice(
+      3,
+    )}`;
+  }
+
+  if (
+    digits.length <=
+    9
+  ) {
+    return `${digits.slice(
+      0,
+      3,
+    )}.${digits.slice(
+      3,
+      6,
+    )}.${digits.slice(
+      6,
+    )}`;
+  }
+
+  return `${digits.slice(
+    0,
+    3,
+  )}.${digits.slice(
+    3,
+    6,
+  )}.${digits.slice(
+    6,
+    9,
+  )}-${digits.slice(
+    9,
+    11,
+  )}`;
+}
+
+function normalizeCpf(
+  value: string,
+): string {
+  return value.replace(
+    /\D/g,
+    '',
+  );
+}
 
 export function CreatePatientScreen() {
   const router =
@@ -53,46 +136,76 @@ export function CreatePatientScreen() {
   const [
     submitError,
     setSubmitError,
-  ] = useState<
-    string | null
-  >(null);
+  ] =
+    useState<
+      string | null
+    >(
+      null,
+    );
 
   const {
     register,
     handleSubmit,
+    setValue,
+    watch,
     formState: {
       errors,
     },
-  } = useForm<CreatePatientFormData>({
-    resolver:
-      zodResolver(
-        createPatientSchema,
-      ),
-    defaultValues: {
-      name: '',
-      email: '',
-      phone: '',
-      birthDate: '',
-    },
-  });
+  } =
+    useForm<CreatePatientFormData>({
+      resolver:
+        zodResolver(
+          createPatientSchema,
+        ),
 
-  async function onSubmit(
-    values: CreatePatientFormData,
-  ) {
-    console.log(
-      '[Higeia] submit válido:',
-      values,
+      defaultValues: {
+        name:
+          '',
+
+        cpf:
+          '',
+
+        email:
+          '',
+
+        phone:
+          '',
+
+        birthDate:
+          '',
+
+        biologicalSex:
+          '',
+      },
+    });
+
+  const cpfValue =
+    watch(
+      'cpf',
     );
 
+  async function onSubmit(
+    values:
+      CreatePatientFormData,
+  ): Promise<void> {
     setSubmitError(
       null,
     );
 
     try {
+      const normalizedCpf =
+        normalizeCpf(
+          values.cpf,
+        );
+
       const patient =
         await createPatientMutation.mutateAsync({
           name:
             values.name.trim(),
+
+          cpf:
+            normalizedCpf ||
+            undefined,
 
           email:
             values.email.trim() ||
@@ -105,35 +218,25 @@ export function CreatePatientScreen() {
           birthDate:
             values.birthDate ||
             undefined,
+
+          biologicalSex:
+            values.biologicalSex ||
+            undefined,
         });
 
       router.push(
         `/patients/${patient.id}`,
       );
-    } catch (error) {
-      console.error(
-        '[Higeia] erro ao cadastrar paciente:',
-        error,
-      );
-
+    } catch (
+      error
+    ) {
       setSubmitError(
-        'Não foi possível cadastrar o paciente. Verifique os dados e tente novamente.',
+        getPatientErrorMessage(
+          error,
+          'Não foi possível cadastrar o paciente. Verifique os dados e tente novamente.',
+        ),
       );
     }
-  }
-
-  function onInvalid(
-    formErrors:
-      FieldErrors<CreatePatientFormData>,
-  ) {
-    console.error(
-      '[Higeia] formulário inválido:',
-      formErrors,
-    );
-
-    setSubmitError(
-      'Existem dados inválidos no formulário. Verifique os campos destacados.',
-    );
   }
 
   return (
@@ -150,6 +253,7 @@ export function CreatePatientScreen() {
           }
         >
           <ArrowLeft className="size-4" />
+
           Voltar para pacientes
         </Button>
 
@@ -174,7 +278,6 @@ export function CreatePatientScreen() {
         onSubmit={
           handleSubmit(
             onSubmit,
-            onInvalid,
           )
         }
         className="space-y-6"
@@ -205,6 +308,49 @@ export function CreatePatientScreen() {
                 <p className="text-sm text-destructive">
                   {
                     errors.name
+                      .message
+                  }
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="cpf">
+                CPF
+              </Label>
+
+              <Input
+                id="cpf"
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder="000.000.000-00"
+                value={
+                  cpfValue
+                }
+                maxLength={14}
+                onChange={(
+                  event,
+                ) => {
+                  setValue(
+                    'cpf',
+                    maskCpf(
+                      event.target.value,
+                    ),
+                    {
+                      shouldDirty:
+                        true,
+
+                      shouldValidate:
+                        true,
+                    },
+                  );
+                }}
+              />
+
+              {errors.cpf && (
+                <p className="text-sm text-destructive">
+                  {
+                    errors.cpf
                       .message
                   }
                 </p>
@@ -279,6 +425,42 @@ export function CreatePatientScreen() {
                   {
                     errors
                       .birthDate
+                      .message
+                  }
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="biologicalSex">
+                Sexo biológico
+              </Label>
+
+              <select
+                id="biologicalSex"
+                {...register(
+                  'biologicalSex',
+                )}
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs outline-none transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              >
+                <option value="">
+                  Não informado
+                </option>
+
+                <option value="MALE">
+                  Masculino
+                </option>
+
+                <option value="FEMALE">
+                  Feminino
+                </option>
+              </select>
+
+              {errors.biologicalSex && (
+                <p className="text-sm text-destructive">
+                  {
+                    errors
+                      .biologicalSex
                       .message
                   }
                 </p>

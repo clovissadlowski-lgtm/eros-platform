@@ -19,6 +19,11 @@ export abstract class PatientsRepository {
     email: string,
   ): Promise<Patient | null>;
 
+  abstract findByCpf(
+    organizationId: string,
+    cpf: string,
+  ): Promise<Patient | null>;
+
   abstract update(
     patient: Patient,
   ): Promise<Patient>;

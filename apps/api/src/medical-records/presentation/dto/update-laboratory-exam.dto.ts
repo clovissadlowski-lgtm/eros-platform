@@ -1,9 +1,14 @@
 import {
   IsDateString,
+  IsEnum,
   IsOptional,
   IsString,
   MaxLength,
 } from 'class-validator';
+
+import {
+  BiomarkerReferenceContext,
+} from '../../../biomarker-catalog/domain/entities/biomarker-reference-range.entity';
 
 export class UpdateLaboratoryExamDto {
   @IsOptional()
@@ -23,6 +28,13 @@ export class UpdateLaboratoryExamDto {
   @IsOptional()
   @IsDateString()
   resultedAt?: string | null;
+
+  @IsOptional()
+  @IsEnum(
+    BiomarkerReferenceContext,
+  )
+  collectionContext?:
+    BiomarkerReferenceContext | null;
 
   @IsOptional()
   @IsString()

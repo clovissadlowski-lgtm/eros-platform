@@ -8,6 +8,7 @@ import {
 import type {
   CreatePatientInput,
   Patient,
+  PatientStatus,
   UpdatePatientInput,
 } from './patient.types';
 
@@ -75,6 +76,23 @@ export async function updatePatient(
       accessToken:
         getAccessToken(),
       body: input,
+    },
+  );
+}
+
+export async function updatePatientStatus(
+  patientId: string,
+  status: PatientStatus,
+): Promise<Patient> {
+  return apiRequest<Patient>(
+    `/patients/${patientId}/status`,
+    {
+      method: 'PATCH',
+      accessToken:
+        getAccessToken(),
+      body: {
+        status,
+      },
     },
   );
 }

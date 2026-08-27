@@ -26,11 +26,7 @@ describe(
     });
 
     beforeEach(async () => {
-      await prisma.patient.deleteMany({
-        where: {
-          organizationId,
-        },
-      });
+      await clearTestData();
 
       await prisma.organization.upsert({
         where: {
@@ -51,11 +47,7 @@ describe(
     });
 
     afterAll(async () => {
-      await prisma.patient.deleteMany({
-        where: {
-          organizationId,
-        },
-      });
+      await clearTestData();
 
       await prisma.organization.deleteMany({
         where: {
@@ -94,6 +86,12 @@ describe(
       expect(storedPatient?.status).toBe(
         'ACTIVE',
       );
+
+      expect(storedPatient?.cpf).toBeNull();
+
+      expect(
+        storedPatient?.biologicalSex,
+      ).toBeNull();
     });
 
     it(
@@ -155,14 +153,36 @@ describe(
         id: randomUUID(),
         organizationId,
         name: 'Integration Patient',
+        cpf: null,
         email:
           'integration.patient@higeia.com',
         phone: '47999999999',
         birthDate: '1990-01-01',
+        biologicalSex: null,
         status: PatientStatus.ACTIVE,
         createdAt: timestamp,
         updatedAt: timestamp,
       };
+    }
+
+    async function clearTestData(): Promise<void> {
+      await prisma.appointment.deleteMany({
+        where: {
+          organizationId,
+        },
+      });
+
+      await prisma.medicalRecord.deleteMany({
+        where: {
+          organizationId,
+        },
+      });
+
+      await prisma.patient.deleteMany({
+        where: {
+          organizationId,
+        },
+      });
     }
   },
 );

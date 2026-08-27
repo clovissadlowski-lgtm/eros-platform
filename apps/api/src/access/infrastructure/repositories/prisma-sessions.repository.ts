@@ -33,32 +33,56 @@ export class PrismaSessionsRepository
       await this.prisma.session.create({
         data: {
           id: session.id,
-          userId: session.userId,
+
+          userId:
+            session.userId,
+
           selectedOrganizationId:
             session.selectedOrganizationId,
+
           refreshTokenHash:
             session.refreshTokenHash,
-          ipAddress: session.ipAddress,
-          userAgent: session.userAgent,
-          expiresAt: new Date(
-            session.expiresAt,
-          ),
-          lastUsedAt: session.lastUsedAt
-            ? new Date(session.lastUsedAt)
-            : null,
-          revokedAt: session.revokedAt
-            ? new Date(session.revokedAt)
-            : null,
-          createdAt: new Date(
-            session.createdAt,
-          ),
-          updatedAt: new Date(
-            session.updatedAt,
-          ),
+
+          ipAddress:
+            session.ipAddress,
+
+          userAgent:
+            session.userAgent,
+
+          expiresAt:
+            new Date(
+              session.expiresAt,
+            ),
+
+          lastUsedAt:
+            session.lastUsedAt
+              ? new Date(
+                  session.lastUsedAt,
+                )
+              : null,
+
+          revokedAt:
+            session.revokedAt
+              ? new Date(
+                  session.revokedAt,
+                )
+              : null,
+
+          createdAt:
+            new Date(
+              session.createdAt,
+            ),
+
+          updatedAt:
+            new Date(
+              session.updatedAt,
+            ),
         },
       });
 
-    return this.toDomain(createdSession);
+    return this.toDomain(
+      createdSession,
+    );
   }
 
   async findById(
@@ -67,12 +91,15 @@ export class PrismaSessionsRepository
     const session =
       await this.prisma.session.findUnique({
         where: {
-          id: sessionId,
+          id:
+            sessionId,
         },
       });
 
     return session
-      ? this.toDomain(session)
+      ? this.toDomain(
+          session,
+        )
       : null;
   }
 
@@ -87,7 +114,9 @@ export class PrismaSessionsRepository
       });
 
     return session
-      ? this.toDomain(session)
+      ? this.toDomain(
+          session,
+        )
       : null;
   }
 
@@ -99,18 +128,29 @@ export class PrismaSessionsRepository
       await this.prisma.session.findMany({
         where: {
           userId,
-          revokedAt: null,
+
+          revokedAt:
+            null,
+
           expiresAt: {
-            gt: new Date(now),
+            gt:
+              new Date(
+                now,
+              ),
           },
         },
+
         orderBy: {
-          createdAt: 'asc',
+          createdAt:
+            'asc',
         },
       });
 
     return sessions.map(
-      (session) => this.toDomain(session),
+      (session) =>
+        this.toDomain(
+          session,
+        ),
     );
   }
 
@@ -120,29 +160,52 @@ export class PrismaSessionsRepository
     const updatedSession =
       await this.prisma.session.update({
         where: {
-          id: session.id,
+          id:
+            session.id,
         },
+
         data: {
+          selectedOrganizationId:
+            session.selectedOrganizationId,
+
           refreshTokenHash:
             session.refreshTokenHash,
-          ipAddress: session.ipAddress,
-          userAgent: session.userAgent,
-          expiresAt: new Date(
-            session.expiresAt,
-          ),
-          lastUsedAt: session.lastUsedAt
-            ? new Date(session.lastUsedAt)
-            : null,
-          revokedAt: session.revokedAt
-            ? new Date(session.revokedAt)
-            : null,
-          updatedAt: new Date(
-            session.updatedAt,
-          ),
+
+          ipAddress:
+            session.ipAddress,
+
+          userAgent:
+            session.userAgent,
+
+          expiresAt:
+            new Date(
+              session.expiresAt,
+            ),
+
+          lastUsedAt:
+            session.lastUsedAt
+              ? new Date(
+                  session.lastUsedAt,
+                )
+              : null,
+
+          revokedAt:
+            session.revokedAt
+              ? new Date(
+                  session.revokedAt,
+                )
+              : null,
+
+          updatedAt:
+            new Date(
+              session.updatedAt,
+            ),
         },
       });
 
-    return this.toDomain(updatedSession);
+    return this.toDomain(
+      updatedSession,
+    );
   }
 
   async revokeAllByUserId(
@@ -153,11 +216,21 @@ export class PrismaSessionsRepository
       await this.prisma.session.updateMany({
         where: {
           userId,
-          revokedAt: null,
+
+          revokedAt:
+            null,
         },
+
         data: {
-          revokedAt: new Date(revokedAt),
-          updatedAt: new Date(revokedAt),
+          revokedAt:
+            new Date(
+              revokedAt,
+            ),
+
+          updatedAt:
+            new Date(
+              revokedAt,
+            ),
         },
       });
 
@@ -168,24 +241,38 @@ export class PrismaSessionsRepository
     session: PrismaSessionRecord,
   ): Session {
     return {
-      id: session.id,
-      userId: session.userId,
-      refreshTokenHash:
-        session.refreshTokenHash,
-      ipAddress: session.ipAddress,
-      userAgent: session.userAgent,
+      id:
+        session.id,
+
+      userId:
+        session.userId,
+
       selectedOrganizationId:
         session.selectedOrganizationId,
+
+      refreshTokenHash:
+        session.refreshTokenHash,
+
+      ipAddress:
+        session.ipAddress,
+
+      userAgent:
+        session.userAgent,
+
       expiresAt:
         session.expiresAt.toISOString(),
+
       lastUsedAt:
         session.lastUsedAt?.toISOString() ??
         null,
+
       revokedAt:
         session.revokedAt?.toISOString() ??
         null,
+
       createdAt:
         session.createdAt.toISOString(),
+
       updatedAt:
         session.updatedAt.toISOString(),
     };

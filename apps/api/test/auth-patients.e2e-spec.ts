@@ -632,13 +632,24 @@ describe(
       });
     }
 
-    async function clearTestData(): Promise<void> {
+        async function clearTestData(): Promise<void> {
       await prisma.session.deleteMany({
         where: {
           userId: {
             in: [
               ownerUserId,
               assistantUserId,
+            ],
+          },
+        },
+      });
+
+      await prisma.medicalRecord.deleteMany({
+        where: {
+          organizationId: {
+            in: [
+              firstOrganizationId,
+              secondOrganizationId,
             ],
           },
         },

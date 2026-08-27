@@ -2,8 +2,10 @@
   ApiProperty,
   ApiPropertyOptional,
 } from '@nestjs/swagger';
+
 import {
   IsEmail,
+  IsEnum,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -11,24 +13,51 @@ import {
   Matches,
 } from 'class-validator';
 
+import {
+  PatientBiologicalSex,
+} from '../../domain/entities/patient.entity';
+
 export class CreatePatientDto {
   @ApiProperty({
     description:
       'Nome completo do paciente.',
     example:
       'Paciente Demonstração Higeia',
-    minLength: 2,
-    maxLength: 120,
+    minLength:
+      2,
+    maxLength:
+      120,
   })
   @IsString()
   @IsNotEmpty()
-  @Length(2, 120)
+  @Length(
+    2,
+    120,
+  )
   name!: string;
 
   @ApiPropertyOptional({
     description:
+      'CPF do paciente. Pode ser informado com ou sem formatação. Quando informado, deve ser válido e único dentro da organização.',
+    example:
+      '123.456.789-09',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(
+    /^(?:\d{11}|\d{3}\.\d{3}\.\d{3}-\d{2})$/,
+    {
+      message:
+        'cpf must contain 11 digits and may use the XXX.XXX.XXX-XX format',
+    },
+  )
+  cpf?: string;
+
+  @ApiPropertyOptional({
+    description:
       'E-mail do paciente. Quando informado, deve ser válido e único dentro da organização.',
-    format: 'email',
+    format:
+      'email',
     example:
       'paciente.demo@higeia.test',
   })
@@ -46,10 +75,13 @@ export class CreatePatientDto {
   })
   @IsOptional()
   @IsString()
-  @Matches(/^\+?[0-9]{8,20}$/, {
-    message:
-      'phone must contain between 8 and 20 digits',
-  })
+  @Matches(
+    /^\+?[0-9]{8,20}$/,
+    {
+      message:
+        'phone must contain between 8 and 20 digits',
+    },
+  )
   phone?: string;
 
   @ApiPropertyOptional({
@@ -62,9 +94,27 @@ export class CreatePatientDto {
   })
   @IsOptional()
   @IsString()
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
-    message:
-      'birthDate must use the YYYY-MM-DD format',
-  })
+  @Matches(
+    /^\d{4}-\d{2}-\d{2}$/,
+    {
+      message:
+        'birthDate must use the YYYY-MM-DD format',
+    },
+  )
   birthDate?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Sexo biológico do paciente para uso em parâmetros clínicos e laboratoriais.',
+    enum:
+      PatientBiologicalSex,
+    example:
+      PatientBiologicalSex.MALE,
+  })
+  @IsOptional()
+  @IsEnum(
+    PatientBiologicalSex,
+  )
+  biologicalSex?:
+    PatientBiologicalSex;
 }

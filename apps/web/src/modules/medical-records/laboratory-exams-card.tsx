@@ -1,19 +1,21 @@
 'use client';
 
 import {
-  FlaskConical,
-  Pencil,
-  Plus,
-  Trash2,
-} from 'lucide-react';
-import {
   useMemo,
   useState,
 } from 'react';
 
 import {
+  FlaskConical,
+  Pencil,
+  Plus,
+  Trash2,
+} from 'lucide-react';
+
+import {
   Button,
 } from '@/components/ui/button';
+
 import {
   Card,
   CardContent,
@@ -24,17 +26,21 @@ import {
 import {
   useCreateLaboratoryExam,
 } from './hooks/use-create-laboratory-exam';
+
 import {
   useDeleteLaboratoryExam,
 } from './hooks/use-delete-laboratory-exam';
+
 import {
   useLaboratoryExams,
 } from './hooks/use-laboratory-exams';
+
 import {
   useUpdateLaboratoryExam,
 } from './hooks/use-update-laboratory-exam';
 
 import type {
+  BiomarkerReferenceContext,
   CreateLaboratoryExamInput,
   LaboratoryExam,
   UpdateLaboratoryExamInput,
@@ -50,27 +56,32 @@ interface LaboratoryExamsCardProps {
 
 interface LaboratoryExamFormState {
   name: string;
-
   laboratoryName: string;
-
   collectedAt: string;
-
   resultedAt: string;
-
+  collectionContext:
+    BiomarkerReferenceContext | '';
   notes: string;
 }
 
 const initialFormState:
   LaboratoryExamFormState = {
     name: '',
-
     laboratoryName: '',
-
     collectedAt: '',
-
     resultedAt: '',
-
+    collectionContext: '',
     notes: '',
+  };
+
+const collectionContextLabels:
+  Record<
+    BiomarkerReferenceContext,
+    string
+  > = {
+    GENERAL: 'Geral',
+    FASTING: 'Em jejum',
+    NON_FASTING: 'Sem jejum',
   };
 
 function dateToInputValue(
@@ -80,9 +91,7 @@ function dateToInputValue(
     return '';
   }
 
-  return value.split(
-    'T',
-  )[0];
+  return value.split('T')[0];
 }
 
 function formatDate(
@@ -93,18 +102,13 @@ function formatDate(
   }
 
   const datePart =
-    value.split(
-      'T',
-    )[0];
+    value.split('T')[0];
 
   const [
     year,
     month,
     day,
-  ] =
-    datePart.split(
-      '-',
-    );
+  ] = datePart.split('-');
 
   if (
     !year ||
@@ -137,6 +141,10 @@ function examToFormState(
       dateToInputValue(
         exam.resultedAt,
       ),
+
+    collectionContext:
+      exam.collectionContext ??
+      '',
 
     notes:
       exam.notes ??
@@ -281,6 +289,10 @@ export function LaboratoryExamsCard({
         form.resultedAt ||
         undefined,
 
+      collectionContext:
+        form.collectionContext ||
+        undefined,
+
       notes:
         form.notes.trim() ||
         undefined,
@@ -306,13 +318,18 @@ export function LaboratoryExamsCard({
         form.resultedAt ||
         null,
 
+      collectionContext:
+        form.collectionContext ||
+        null,
+
       notes:
         form.notes.trim() ||
         null,
     };
   }
 
-  async function handleSave(): Promise<void> {
+  async function handleSave():
+    Promise<void> {
     if (
       !form.name.trim()
     ) {
@@ -498,7 +515,51 @@ export function LaboratoryExamsCard({
           />
         </label>
 
-        <label className="space-y-1.5 sm:col-span-2">
+        <label className="space-y-1.5">
+          <span className="text-sm font-medium">
+            Contexto da coleta
+          </span>
+
+          <select
+            value={
+              form.collectionContext
+            }
+            onChange={(
+              event,
+            ) =>
+              setForm(
+                (
+                  current,
+                ) => ({
+                  ...current,
+
+                  collectionContext:
+                    event.target.value as
+                      BiomarkerReferenceContext | '',
+                }),
+              )
+            }
+            className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+          >
+            <option value="">
+              Não informado
+            </option>
+
+            <option value="GENERAL">
+              Geral
+            </option>
+
+            <option value="FASTING">
+              Em jejum
+            </option>
+
+            <option value="NON_FASTING">
+              Sem jejum
+            </option>
+          </select>
+        </label>
+
+        <label className="space-y-1.5">
           <span className="text-sm font-medium">
             Observações
           </span>
@@ -636,114 +697,135 @@ export function LaboratoryExamsCard({
           </div>
         )}
 
-       {examsQuery.data?.map(
-  (
-    exam,
-  ) => (
-    <div
-      key={
-        exam.id
-      }
-      className="rounded-xl border p-4"
-    >
-      {editingId ===
-      exam.id ? (
-        renderForm()
-      ) : (
-        <div className="space-y-4">
-          <div className="flex items-start justify-between gap-4">
-            <div className="space-y-1.5">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="font-medium">
-                  {exam.name}
-                </p>
+        {examsQuery.data?.map(
+          (
+            exam,
+          ) => (
+            <div
+              key={
+                exam.id
+              }
+              className="rounded-xl border p-4"
+            >
+              {editingId ===
+              exam.id ? (
+                renderForm()
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium">
+                          {exam.name}
+                        </p>
 
-                <span className="rounded-full border px-2 py-0.5 text-xs text-muted-foreground">
-                  Exame laboratorial
-                </span>
-              </div>
+                        <span className="rounded-full border px-2 py-0.5 text-xs text-muted-foreground">
+                          Exame laboratorial
+                        </span>
 
-              {exam.laboratoryName && (
-                <p className="text-sm text-muted-foreground">
-                  Laboratório:{' '}
-                  {
-                    exam.laboratoryName
-                  }
-                </p>
-              )}
+                        {exam.collectionContext && (
+                          <span className="rounded-full border px-2 py-0.5 text-xs text-muted-foreground">
+                            {
+                              collectionContextLabels[
+                                exam.collectionContext
+                              ]
+                            }
+                          </span>
+                        )}
+                      </div>
 
-              {exam.collectedAt && (
-                <p className="text-sm text-muted-foreground">
-                  Coleta:{' '}
-                  {formatDate(
-                    exam.collectedAt,
-                  )}
-                </p>
-              )}
+                      {exam.laboratoryName && (
+                        <p className="text-sm text-muted-foreground">
+                          Laboratório:{' '}
+                          {
+                            exam.laboratoryName
+                          }
+                        </p>
+                      )}
 
-              {exam.resultedAt && (
-                <p className="text-sm text-muted-foreground">
-                  Resultado:{' '}
-                  {formatDate(
-                    exam.resultedAt,
-                  )}
-                </p>
-              )}
+                      {exam.collectedAt && (
+                        <p className="text-sm text-muted-foreground">
+                          Coleta:{' '}
+                          {formatDate(
+                            exam.collectedAt,
+                          )}
+                        </p>
+                      )}
 
-              {exam.notes && (
-                <p className="text-sm text-muted-foreground">
-                  {exam.notes}
-                </p>
+                      {exam.collectionContext && (
+                        <p className="text-sm text-muted-foreground">
+                          Contexto:{' '}
+                          {
+                            collectionContextLabels[
+                              exam.collectionContext
+                            ]
+                          }
+                        </p>
+                      )}
+
+                      {exam.resultedAt && (
+                        <p className="text-sm text-muted-foreground">
+                          Resultado:{' '}
+                          {formatDate(
+                            exam.resultedAt,
+                          )}
+                        </p>
+                      )}
+
+                      {exam.notes && (
+                        <p className="text-sm text-muted-foreground">
+                          {exam.notes}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() =>
+                          startEditing(
+                            exam,
+                          )
+                        }
+                        aria-label="Editar exame laboratorial"
+                      >
+                        <Pencil className="size-4" />
+                      </Button>
+
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        disabled={
+                          deleteMutation.isPending
+                        }
+                        onClick={() =>
+                          void handleDelete(
+                            exam,
+                          )
+                        }
+                        aria-label="Excluir exame laboratorial"
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <LaboratoryResultsSection
+                    patientId={
+                      patientId
+                    }
+                    examId={
+                      exam.id
+                    }
+                  />
+                </div>
               )}
             </div>
-
-            <div className="flex gap-1">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() =>
-                  startEditing(
-                    exam,
-                  )
-                }
-                aria-label="Editar exame laboratorial"
-              >
-                <Pencil className="size-4" />
-              </Button>
-
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                disabled={
-                  deleteMutation.isPending
-                }
-                onClick={() =>
-                  void handleDelete(
-                    exam,
-                  )
-                }
-                aria-label="Excluir exame laboratorial"
-              >
-                <Trash2 className="size-4" />
-              </Button>
-            </div>
-          </div>
-
-          <LaboratoryResultsSection
-            patientId={
-              patientId
-            }
-            examId={
-              exam.id
-            }
-          />
-        </div>
-      )}
-    </div>
-  ),
-)}
+          ),
+        )}
 
         {(createMutation.isError ||
           updateMutation.isError ||

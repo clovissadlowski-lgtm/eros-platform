@@ -7,12 +7,17 @@ import {
 } from '../../../common/database/prisma.service';
 
 import {
+  BiomarkerReferenceContext as PrismaBiomarkerReferenceContext,
   LaboratoryResultInterpretation as PrismaLaboratoryResultInterpretation,
 } from '../../../generated/prisma/enums';
 
 import {
   LaboratoryExam,
 } from '../../domain/entities/laboratory-exam.entity';
+
+import {
+  BiomarkerReferenceContext,
+} from '../../../biomarker-catalog/domain/entities/biomarker-reference-range.entity';
 
 import {
   LaboratoryResult,
@@ -40,6 +45,9 @@ interface PrismaLaboratoryExamRecord {
   collectedAt: Date | null;
 
   resultedAt: Date | null;
+
+  collectionContext:
+    PrismaBiomarkerReferenceContext | null;
 
   notes: string | null;
 
@@ -122,6 +130,12 @@ export class PrismaLaboratoryExamsRepository
               ? new Date(
                   exam.resultedAt,
                 )
+              : null,
+
+          collectionContext:
+            exam.collectionContext
+              ? exam.collectionContext as
+                PrismaBiomarkerReferenceContext
               : null,
 
           notes:
@@ -274,6 +288,12 @@ export class PrismaLaboratoryExamsRepository
               ? new Date(
                   exam.resultedAt,
                 )
+              : null,
+
+          collectionContext:
+            exam.collectionContext
+              ? exam.collectionContext as
+                PrismaBiomarkerReferenceContext
               : null,
 
           notes:
@@ -505,6 +525,12 @@ export class PrismaLaboratoryExamsRepository
         exam.resultedAt
           ?.toISOString() ??
         null,
+
+      collectionContext:
+        exam.collectionContext
+          ? exam.collectionContext as
+            BiomarkerReferenceContext
+          : null,
 
       notes:
         exam.notes,

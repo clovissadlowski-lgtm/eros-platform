@@ -311,30 +311,169 @@ export interface UpdateMedicalRecordAllergyInput {
 }
 
 // -----------------------------------------------------------------------------
+// DIETARY ITEM CATALOG
+// -----------------------------------------------------------------------------
+
+export type DietaryItemCatalogType =
+  | 'FOOD'
+  | 'NUTRIENT'
+  | 'COMPONENT'
+  | 'INGREDIENT'
+  | 'OTHER';
+
+export interface DietaryItemCatalogSynonym {
+  id: string;
+  term: string;
+  normalizedTerm: string;
+}
+
+export interface DietaryItemCatalogItem {
+  id: string;
+
+  name: string;
+  normalizedName: string;
+
+  type: DietaryItemCatalogType;
+
+  category: string | null;
+  description: string | null;
+
+  isActive: boolean;
+
+  synonyms: DietaryItemCatalogSynonym[];
+}
+
+// -----------------------------------------------------------------------------
+// DIETARY PREFERENCES AND RESTRICTIONS
+// -----------------------------------------------------------------------------
+
+export type DietaryRestrictionType =
+  | 'PREFERENCE'
+  | 'INTOLERANCE'
+  | 'MEDICAL_RESTRICTION'
+  | 'CULTURAL_RELIGIOUS'
+  | 'ETHICAL_LIFESTYLE'
+  | 'OTHER';
+
+export type DietaryRestrictionAction =
+  | 'AVOID'
+  | 'LIMIT'
+  | 'MONITOR'
+  | 'KEEP_CONSISTENT'
+  | 'BLOCK';
+
+export type DietaryRestrictionRisk =
+  | 'NONE'
+  | 'LOW'
+  | 'MODERATE'
+  | 'HIGH'
+  | 'CRITICAL';
+
+export type DietaryRestrictionSource =
+  | 'PATIENT_REPORTED'
+  | 'PROFESSIONAL_REPORTED'
+  | 'SYSTEM_DERIVED';
+
+export type DietaryRestrictionStatus =
+  | 'ACTIVE'
+  | 'INACTIVE'
+  | 'RESOLVED';
+
+export interface MedicalRecordDietaryRestriction {
+  id: string;
+  organizationId: string;
+  medicalRecordId: string;
+  patientId: string;
+
+  dietaryItemCatalogId: string | null;
+
+  item: string;
+
+  type: DietaryRestrictionType;
+  action: DietaryRestrictionAction;
+  risk: DietaryRestrictionRisk;
+  source: DietaryRestrictionSource;
+
+  reason: string | null;
+  identifiedAt: string | null;
+
+  status: DietaryRestrictionStatus;
+
+  notes: string | null;
+
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateMedicalRecordDietaryRestrictionInput {
+  dietaryItemCatalogId?: string;
+
+  item: string;
+
+  type: DietaryRestrictionType;
+  action: DietaryRestrictionAction;
+
+  risk?: DietaryRestrictionRisk;
+
+  source?:
+    | 'PATIENT_REPORTED'
+    | 'PROFESSIONAL_REPORTED';
+
+  reason?: string;
+
+  identifiedAt?: string;
+
+  status?: DietaryRestrictionStatus;
+
+  notes?: string;
+}
+
+export interface UpdateMedicalRecordDietaryRestrictionInput {
+  dietaryItemCatalogId?: string | null;
+
+  item?: string;
+
+  type?: DietaryRestrictionType;
+  action?: DietaryRestrictionAction;
+
+  risk?: DietaryRestrictionRisk;
+
+  source?:
+    | 'PATIENT_REPORTED'
+    | 'PROFESSIONAL_REPORTED';
+
+  reason?: string | null;
+
+  identifiedAt?: string | null;
+
+  status?: DietaryRestrictionStatus;
+
+  notes?: string | null;
+}
+
+// -----------------------------------------------------------------------------
 // BIOMARKER CATALOG
 // -----------------------------------------------------------------------------
 
 export interface BiomarkerCatalogItem {
   id: string;
-
   name: string;
-
   code: string | null;
-
   defaultUnit: string | null;
-
   description: string | null;
-
   active: boolean;
-
   createdAt: string;
-
   updatedAt: string;
 }
 
 // -----------------------------------------------------------------------------
 // LABORATORY EXAMS
 // -----------------------------------------------------------------------------
+
+export type BiomarkerReferenceContext =
+  | 'GENERAL'
+  | 'FASTING'
+  | 'NON_FASTING';
 
 export type LaboratoryResultInterpretation =
   | 'LOW'
@@ -361,6 +500,9 @@ export interface LaboratoryExam {
   collectedAt: string | null;
 
   resultedAt: string | null;
+
+  collectionContext:
+    BiomarkerReferenceContext | null;
 
   notes: string | null;
 
@@ -409,6 +551,9 @@ export interface CreateLaboratoryExamInput {
 
   resultedAt?: string;
 
+  collectionContext?:
+    BiomarkerReferenceContext;
+
   notes?: string;
 }
 
@@ -420,6 +565,9 @@ export interface UpdateLaboratoryExamInput {
   collectedAt?: string | null;
 
   resultedAt?: string | null;
+
+  collectionContext?:
+    BiomarkerReferenceContext | null;
 
   notes?: string | null;
 }

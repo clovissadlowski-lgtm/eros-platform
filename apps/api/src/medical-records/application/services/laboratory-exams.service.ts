@@ -12,6 +12,31 @@ import {
 } from '../../../biomarker-catalog/domain/repositories/biomarker-catalog.repository';
 
 import {
+  BiomarkerReferenceRangeResolverService,
+} from '../../../biomarker-catalog/application/services/biomarker-reference-range-resolver.service';
+
+import {
+  LaboratoryResultInterpreterService,
+} from '../../../biomarker-catalog/application/services/laboratory-result-interpreter.service';
+
+import {
+  BiomarkerReferenceSex,
+} from '../../../biomarker-catalog/domain/entities/biomarker-reference-range.entity';
+
+import type {
+  BiomarkerReferenceContext,
+  BiomarkerReferenceRange,
+} from '../../../biomarker-catalog/domain/entities/biomarker-reference-range.entity';
+
+import {
+  PatientBiologicalSex,
+} from '../../../patients/domain/entities/patient.entity';
+
+import {
+  PatientsRepository,
+} from '../../../patients/domain/repositories/patients.repository';
+
+import {
   LaboratoryExam,
 } from '../../domain/entities/laboratory-exam.entity';
 
@@ -42,6 +67,8 @@ export interface CreateLaboratoryExamInput {
 
   resultedAt?: string;
 
+  collectionContext?: BiomarkerReferenceContext;
+
   notes?: string;
 }
 
@@ -53,6 +80,8 @@ export interface UpdateLaboratoryExamInput {
   collectedAt?: string | null;
 
   resultedAt?: string | null;
+
+  collectionContext?: BiomarkerReferenceContext | null;
 
   notes?: string | null;
 }
@@ -106,6 +135,15 @@ export class LaboratoryExamsService {
 
     private readonly biomarkerCatalogRepository:
       BiomarkerCatalogRepository,
+
+    private readonly patientsRepository:
+      PatientsRepository,
+
+    private readonly referenceRangeResolver:
+      BiomarkerReferenceRangeResolverService,
+
+    private readonly resultInterpreter:
+      LaboratoryResultInterpreterService,
   ) {}
 
   async createExam(
@@ -161,6 +199,10 @@ export class LaboratoryExamsService {
           this.normalizeOptionalDate(
             input.resultedAt,
           ),
+
+        collectionContext:
+          input.collectionContext ??
+          null,
 
         notes:
           this.normalizeOptionalText(
@@ -285,6 +327,11 @@ export class LaboratoryExamsService {
                 input.resultedAt,
               )
             : exam.resultedAt,
+
+        collectionContext:
+          input.collectionContext !== undefined
+            ? input.collectionContext
+            : exam.collectionContext,
 
         notes:
           input.notes !== undefined
@@ -446,10 +493,18 @@ export class LaboratoryExamsService {
       result,
     );
 
+    const enrichedResult =
+      await this.applyAutomaticReferenceData(
+        patientId,
+        organizationId,
+        exam,
+        result,
+      );
+
     return this
       .laboratoryExamsRepository
       .createResult(
-        result,
+        enrichedResult,
       );
   }
 
@@ -603,10 +658,18 @@ export class LaboratoryExamsService {
       updated,
     );
 
+    const enrichedResult =
+      await this.applyAutomaticReferenceData(
+        patientId,
+        organizationId,
+        exam,
+        updated,
+      );
+
     return this
       .laboratoryExamsRepository
       .updateResult(
-        updated,
+        enrichedResult,
       );
   }
 
@@ -658,6 +721,188 @@ export class LaboratoryExamsService {
         organizationId,
         resultId,
       );
+  }
+
+  private async applyAutomaticReferenceData(
+    patientId: string,
+    organizationId: string,
+    exam: LaboratoryExam,
+    result: LaboratoryResult,
+  ): Promise<LaboratoryResult> {
+    if (
+      !result.biomarkerCatalogId ||
+      !result.value ||
+      !result.unit
+    ) {
+      return result;
+    }
+
+    const patient =
+      await this.patientsRepository.findById(
+        organizationId,
+        patientId,
+      );
+
+    if (!patient) {
+      return result;
+    }
+
+    const ageYears =
+      patient.birthDate
+        ? this.calculateAgeYears(
+            patient.birthDate,
+            exam.collectedAt ??
+              exam.resultedAt ??
+              new Date().toISOString(),
+          )
+        : undefined;
+
+    const range =
+      await this.referenceRangeResolver.resolve({
+        biomarkerCatalogId:
+          result.biomarkerCatalogId,
+
+        unit:
+          result.unit,
+
+        ageYears,
+
+        sex:
+          this.mapPatientBiologicalSex(
+            patient.biologicalSex,
+          ),
+
+        context:
+          exam.collectionContext ??
+          undefined,
+      });
+
+    if (!range) {
+      return result;
+    }
+
+    const automaticInterpretation =
+      this.resultInterpreter.interpret({
+        value:
+          result.value,
+
+        referenceRange:
+          range,
+      });
+
+    return {
+      ...result,
+
+      referenceRange:
+        result.referenceRange ??
+        this.formatReferenceRange(
+          range,
+        ),
+
+      interpretation:
+        result.interpretation ??
+        (
+          automaticInterpretation
+            ? automaticInterpretation as
+              LaboratoryResultInterpretation
+            : null
+        ),
+    };
+  }
+
+  private mapPatientBiologicalSex(
+    biologicalSex:
+      PatientBiologicalSex | null,
+  ): BiomarkerReferenceSex | undefined {
+    if (
+      biologicalSex ===
+      PatientBiologicalSex.MALE
+    ) {
+      return BiomarkerReferenceSex.MALE;
+    }
+
+    if (
+      biologicalSex ===
+      PatientBiologicalSex.FEMALE
+    ) {
+      return BiomarkerReferenceSex.FEMALE;
+    }
+
+    return undefined;
+  }
+
+  private calculateAgeYears(
+    birthDate: string,
+    referenceDate: string,
+  ): number {
+    const birth =
+      new Date(
+        birthDate,
+      );
+
+    const reference =
+      new Date(
+        referenceDate,
+      );
+
+    let age =
+      reference.getUTCFullYear() -
+      birth.getUTCFullYear();
+
+    const monthDifference =
+      reference.getUTCMonth() -
+      birth.getUTCMonth();
+
+    const birthdayNotReached =
+      monthDifference < 0 ||
+      (
+        monthDifference === 0 &&
+        reference.getUTCDate() <
+          birth.getUTCDate()
+      );
+
+    if (
+      birthdayNotReached
+    ) {
+      age -= 1;
+    }
+
+    return Math.max(
+      age,
+      0,
+    );
+  }
+
+  private formatReferenceRange(
+    range:
+      BiomarkerReferenceRange,
+  ): string | null {
+    const lower =
+      range.lowerBound;
+
+    const upper =
+      range.upperBound;
+
+    if (
+      lower !== null &&
+      upper !== null
+    ) {
+      return `${lower} - ${upper} ${range.unit}`;
+    }
+
+    if (
+      lower !== null
+    ) {
+      return `>= ${lower} ${range.unit}`;
+    }
+
+    if (
+      upper !== null
+    ) {
+      return `<= ${upper} ${range.unit}`;
+    }
+
+    return null;
   }
 
   private async getBiomarkerCatalogItem(

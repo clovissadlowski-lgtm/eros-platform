@@ -1,6 +1,9 @@
-import { ApiProperty } from '@nestjs/swagger';
+import {
+  ApiProperty,
+} from '@nestjs/swagger';
 
 import {
+  PatientBiologicalSex,
   PatientStatus,
 } from '../../../domain/entities/patient.entity';
 
@@ -8,7 +11,8 @@ export class PatientResponseDto {
   @ApiProperty({
     description:
       'Identificador único do paciente.',
-    format: 'uuid',
+    format:
+      'uuid',
     example:
       '507ff5bd-f2f2-451d-9e2d-5e2d1d3303ab',
   })
@@ -17,7 +21,8 @@ export class PatientResponseDto {
   @ApiProperty({
     description:
       'Organização à qual o paciente pertence.',
-    format: 'uuid',
+    format:
+      'uuid',
     example:
       '7181fc2f-7a27-462e-aa75-16565a036509',
   })
@@ -34,8 +39,10 @@ export class PatientResponseDto {
   @ApiProperty({
     description:
       'E-mail do paciente, quando informado.',
-    format: 'email',
-    nullable: true,
+    format:
+      'email',
+    nullable:
+      true,
     example:
       'paciente.demo@higeia.test',
   })
@@ -44,7 +51,8 @@ export class PatientResponseDto {
   @ApiProperty({
     description:
       'Telefone do paciente, quando informado.',
-    nullable: true,
+    nullable:
+      true,
     example:
       '+5547999999999',
   })
@@ -53,7 +61,8 @@ export class PatientResponseDto {
   @ApiProperty({
     description:
       'Data de nascimento no formato YYYY-MM-DD, quando informada.',
-    nullable: true,
+    nullable:
+      true,
     example:
       '1990-01-15',
   })
@@ -61,8 +70,22 @@ export class PatientResponseDto {
 
   @ApiProperty({
     description:
+      'Sexo biológico do paciente para uso em parâmetros clínicos e laboratoriais.',
+    enum:
+      PatientBiologicalSex,
+    nullable:
+      true,
+    example:
+      PatientBiologicalSex.MALE,
+  })
+  biologicalSex!:
+    PatientBiologicalSex | null;
+
+  @ApiProperty({
+    description:
       'Situação atual do paciente.',
-    enum: PatientStatus,
+    enum:
+      PatientStatus,
     example:
       PatientStatus.ACTIVE,
   })
@@ -71,7 +94,8 @@ export class PatientResponseDto {
   @ApiProperty({
     description:
       'Data e horário de criação do registro.',
-    format: 'date-time',
+    format:
+      'date-time',
     example:
       '2026-08-04T13:44:08.849Z',
   })
@@ -80,7 +104,8 @@ export class PatientResponseDto {
   @ApiProperty({
     description:
       'Data e horário da última atualização.',
-    format: 'date-time',
+    format:
+      'date-time',
     example:
       '2026-08-04T13:44:08.849Z',
   })

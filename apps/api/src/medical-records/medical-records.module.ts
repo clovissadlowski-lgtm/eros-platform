@@ -23,6 +23,10 @@ import {
 } from '../common/database/prisma.module';
 
 import {
+  DietaryItemCatalogModule,
+} from '../dietary-item-catalog/dietary-item-catalog.module';
+
+import {
   MedicationCatalogModule,
 } from '../medication-catalog/medication-catalog.module';
 
@@ -37,6 +41,10 @@ import {
 import {
   MedicalRecordAllergiesService,
 } from './application/services/medical-record-allergies.service';
+
+import {
+  MedicalRecordDietaryRestrictionsService,
+} from './application/services/medical-record-dietary-restrictions.service';
 
 import {
   MedicalRecordHealthConditionsService,
@@ -59,6 +67,10 @@ import {
 } from './domain/repositories/medical-record-allergies.repository';
 
 import {
+  MedicalRecordDietaryRestrictionsRepository,
+} from './domain/repositories/medical-record-dietary-restrictions.repository';
+
+import {
   MedicalRecordHealthConditionsRepository,
 } from './domain/repositories/medical-record-health-conditions.repository';
 
@@ -77,6 +89,10 @@ import {
 import {
   PrismaMedicalRecordAllergiesRepository,
 } from './infrastructure/repositories/prisma-medical-record-allergies.repository';
+
+import {
+  PrismaMedicalRecordDietaryRestrictionsRepository,
+} from './infrastructure/repositories/prisma-medical-record-dietary-restrictions.repository';
 
 import {
   PrismaMedicalRecordHealthConditionsRepository,
@@ -99,6 +115,10 @@ import {
 } from './presentation/controllers/medical-record-allergies.controller';
 
 import {
+  MedicalRecordDietaryRestrictionsController,
+} from './presentation/controllers/medical-record-dietary-restrictions.controller';
+
+import {
   MedicalRecordHealthConditionsController,
 } from './presentation/controllers/medical-record-health-conditions.controller';
 
@@ -118,6 +138,7 @@ import {
     ClinicalCatalogModule,
     MedicationCatalogModule,
     AllergenCatalogModule,
+    DietaryItemCatalogModule,
     BiomarkerCatalogModule,
   ],
 
@@ -126,6 +147,7 @@ import {
     MedicalRecordHealthConditionsController,
     MedicalRecordMedicationsController,
     MedicalRecordAllergiesController,
+    MedicalRecordDietaryRestrictionsController,
     LaboratoryExamsController,
   ],
 
@@ -134,6 +156,7 @@ import {
     MedicalRecordHealthConditionsService,
     MedicalRecordMedicationsService,
     MedicalRecordAllergiesService,
+    MedicalRecordDietaryRestrictionsService,
     LaboratoryExamsService,
 
     {
@@ -170,6 +193,14 @@ import {
 
     {
       provide:
+        MedicalRecordDietaryRestrictionsRepository,
+
+      useClass:
+        PrismaMedicalRecordDietaryRestrictionsRepository,
+    },
+
+    {
+      provide:
         LaboratoryExamsRepository,
 
       useClass:
@@ -182,12 +213,14 @@ import {
     MedicalRecordHealthConditionsService,
     MedicalRecordMedicationsService,
     MedicalRecordAllergiesService,
+    MedicalRecordDietaryRestrictionsService,
     LaboratoryExamsService,
 
     MedicalRecordsRepository,
     MedicalRecordHealthConditionsRepository,
     MedicalRecordMedicationsRepository,
     MedicalRecordAllergiesRepository,
+    MedicalRecordDietaryRestrictionsRepository,
     LaboratoryExamsRepository,
   ],
 })

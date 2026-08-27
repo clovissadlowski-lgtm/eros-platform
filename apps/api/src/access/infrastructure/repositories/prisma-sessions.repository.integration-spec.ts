@@ -381,6 +381,7 @@ describe(
       return {
         id,
         userId: randomUUID(),
+        selectedOrganizationId: null,
         refreshTokenHash:
           createTokenHash(),
         ipAddress: '127.0.0.1',
