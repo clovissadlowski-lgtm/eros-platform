@@ -35,6 +35,10 @@ import {
 } from '../patients/patients.module';
 
 import {
+  AnthropometricAssessmentsService,
+} from './application/services/anthropometric-assessments.service';
+
+import {
   LaboratoryExamsService,
 } from './application/services/laboratory-exams.service';
 
@@ -57,6 +61,10 @@ import {
 import {
   MedicalRecordsService,
 } from './application/services/medical-records.service';
+
+import {
+  AnthropometricAssessmentsRepository,
+} from './domain/repositories/anthropometric-assessments.repository';
 
 import {
   LaboratoryExamsRepository,
@@ -83,6 +91,10 @@ import {
 } from './domain/repositories/medical-records.repository';
 
 import {
+  PrismaAnthropometricAssessmentsRepository,
+} from './infrastructure/repositories/prisma-anthropometric-assessments.repository';
+
+import {
   PrismaLaboratoryExamsRepository,
 } from './infrastructure/repositories/prisma-laboratory-exams.repository';
 
@@ -105,6 +117,10 @@ import {
 import {
   PrismaMedicalRecordsRepository,
 } from './infrastructure/repositories/prisma-medical-records.repository';
+
+import {
+  AnthropometricAssessmentsController,
+} from './presentation/controllers/anthropometric-assessments.controller';
 
 import {
   LaboratoryExamsController,
@@ -149,6 +165,7 @@ import {
     MedicalRecordAllergiesController,
     MedicalRecordDietaryRestrictionsController,
     LaboratoryExamsController,
+    AnthropometricAssessmentsController,
   ],
 
   providers: [
@@ -158,6 +175,7 @@ import {
     MedicalRecordAllergiesService,
     MedicalRecordDietaryRestrictionsService,
     LaboratoryExamsService,
+    AnthropometricAssessmentsService,
 
     {
       provide:
@@ -206,6 +224,14 @@ import {
       useClass:
         PrismaLaboratoryExamsRepository,
     },
+
+    {
+      provide:
+        AnthropometricAssessmentsRepository,
+
+      useClass:
+        PrismaAnthropometricAssessmentsRepository,
+    },
   ],
 
   exports: [
@@ -215,6 +241,7 @@ import {
     MedicalRecordAllergiesService,
     MedicalRecordDietaryRestrictionsService,
     LaboratoryExamsService,
+    AnthropometricAssessmentsService,
 
     MedicalRecordsRepository,
     MedicalRecordHealthConditionsRepository,
@@ -222,6 +249,7 @@ import {
     MedicalRecordAllergiesRepository,
     MedicalRecordDietaryRestrictionsRepository,
     LaboratoryExamsRepository,
+    AnthropometricAssessmentsRepository,
   ],
 })
 export class MedicalRecordsModule {}

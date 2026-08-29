@@ -86,6 +86,65 @@ interface DietaryRestrictionResponse {
   updatedAt: string;
 }
 
+interface AnthropometricSkinfoldMeasurementResponse {
+  id: string;
+  anthropometricAssessmentId: string;
+  site:
+    | 'CHEST'
+    | 'MIDAXILLARY'
+    | 'TRICEPS'
+    | 'SUBSCAPULAR'
+    | 'ABDOMEN'
+    | 'SUPRAILIAC'
+    | 'THIGH'
+    | 'BICEPS'
+    | 'SUPRASPINALE'
+    | 'CALF'
+    | 'OTHER';
+  side: 'RIGHT' | 'LEFT';
+  readingNumber: number;
+  valueMm: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface AnthropometricAssessmentResponse {
+  id: string;
+  organizationId: string;
+  medicalRecordId: string;
+  patientId: string;
+  measuredAt: string;
+  weightKg: number | null;
+  heightCm: number | null;
+  bodyFatPercentage: number | null;
+  fatMassKg: number | null;
+  leanMassKg: number | null;
+  muscleMassKg: number | null;
+  waistCircumferenceCm: number | null;
+  hipCircumferenceCm: number | null;
+  abdomenCircumferenceCm: number | null;
+  chestCircumferenceCm: number | null;
+  armCircumferenceCm: number | null;
+  thighCircumferenceCm: number | null;
+  calfCircumferenceCm: number | null;
+  bodyCompositionMethod:
+    | 'BIOIMPEDANCE'
+    | 'SKINFOLD'
+    | 'DEXA'
+    | 'OTHER'
+    | null;
+  skinfoldProtocol:
+    | 'JACKSON_POLLOCK_3'
+    | 'JACKSON_POLLOCK_7'
+    | 'OTHER'
+    | null;
+  skinfoldMeasurements:
+    AnthropometricSkinfoldMeasurementResponse[];
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 describe('Medical Records (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
@@ -110,6 +169,7 @@ describe('Medical Records (e2e)', () => {
 
   let medicalRecordId: string;
   let dietaryRestrictionId: string;
+  let anthropometricAssessmentId: string;
 
   const password =
     'StrongPassword#2026';
@@ -580,6 +640,282 @@ describe('Medical Records (e2e)', () => {
     });
   });
 
+  it('creates an anthropometric assessment with seven skinfold sites', async () => {
+    const response = await request(app.getHttpServer())
+      .post(
+        `/api/patients/${patientId}/medical-record/anthropometric-assessments`,
+      )
+      .set(
+        'Authorization',
+        `Bearer ${ownerTenantAccessToken}`,
+      )
+      .send({
+        measuredAt: '2026-08-29',
+        weightKg: 76.7,
+        heightCm: 170,
+        bodyFatPercentage: 19.1,
+        fatMassKg: 14.65,
+        leanMassKg: 62.05,
+        waistCircumferenceCm: 83,
+        hipCircumferenceCm: 88.5,
+        abdomenCircumferenceCm: 85,
+        chestCircumferenceCm: 101,
+        armCircumferenceCm: 36,
+        thighCircumferenceCm: 58,
+        calfCircumferenceCm: 38,
+        bodyCompositionMethod: 'SKINFOLD',
+        skinfoldProtocol: 'JACKSON_POLLOCK_7',
+        skinfoldMeasurements: [
+          {
+            site: 'CHEST',
+            side: 'RIGHT',
+            readingNumber: 1,
+            valueMm: 12.4,
+          },
+          {
+            site: 'MIDAXILLARY',
+            side: 'RIGHT',
+            readingNumber: 1,
+            valueMm: 14.1,
+          },
+          {
+            site: 'TRICEPS',
+            side: 'RIGHT',
+            readingNumber: 1,
+            valueMm: 11.8,
+          },
+          {
+            site: 'SUBSCAPULAR',
+            side: 'RIGHT',
+            readingNumber: 1,
+            valueMm: 16.2,
+          },
+          {
+            site: 'ABDOMEN',
+            side: 'RIGHT',
+            readingNumber: 1,
+            valueMm: 20.5,
+          },
+          {
+            site: 'SUPRAILIAC',
+            side: 'RIGHT',
+            readingNumber: 1,
+            valueMm: 15.3,
+          },
+          {
+            site: 'THIGH',
+            side: 'RIGHT',
+            readingNumber: 1,
+            valueMm: 18.7,
+          },
+        ],
+        notes: '  Avaliação antropométrica inicial.  ',
+      })
+      .expect(201);
+
+    const body =
+      response.body as AnthropometricAssessmentResponse;
+
+    expect(body).toMatchObject({
+      organizationId,
+      medicalRecordId,
+      patientId,
+      measuredAt: '2026-08-29',
+      weightKg: 76.7,
+      heightCm: 170,
+      bodyFatPercentage: 19.1,
+      waistCircumferenceCm: 83,
+      hipCircumferenceCm: 88.5,
+      bodyCompositionMethod: 'SKINFOLD',
+      skinfoldProtocol: 'JACKSON_POLLOCK_7',
+      notes: 'Avaliação antropométrica inicial.',
+    });
+
+    expect(body.skinfoldMeasurements).toHaveLength(7);
+
+    anthropometricAssessmentId = body.id;
+
+    const persisted =
+      await prisma.anthropometricAssessment.findFirst({
+        where: {
+          id: anthropometricAssessmentId,
+          organizationId,
+          patientId,
+        },
+        include: {
+          skinfoldMeasurements: true,
+        },
+      });
+
+    expect(persisted).not.toBeNull();
+    expect(
+      persisted?.skinfoldMeasurements,
+    ).toHaveLength(7);
+  });
+
+  it('lists anthropometric assessments from the patient', async () => {
+    const response = await request(app.getHttpServer())
+      .get(
+        `/api/patients/${patientId}/medical-record/anthropometric-assessments`,
+      )
+      .set(
+        'Authorization',
+        `Bearer ${ownerTenantAccessToken}`,
+      )
+      .expect(200);
+
+    const body =
+      response.body as AnthropometricAssessmentResponse[];
+
+    expect(body).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: anthropometricAssessmentId,
+          organizationId,
+          medicalRecordId,
+          patientId,
+          measuredAt: '2026-08-29',
+        }),
+      ]),
+    );
+  });
+
+  it('gets an anthropometric assessment by id', async () => {
+    const response = await request(app.getHttpServer())
+      .get(
+        `/api/patients/${patientId}/medical-record/anthropometric-assessments/${anthropometricAssessmentId}`,
+      )
+      .set(
+        'Authorization',
+        `Bearer ${ownerTenantAccessToken}`,
+      )
+      .expect(200);
+
+    const body =
+      response.body as AnthropometricAssessmentResponse;
+
+    expect(body).toMatchObject({
+      id: anthropometricAssessmentId,
+      organizationId,
+      medicalRecordId,
+      patientId,
+      weightKg: 76.7,
+      heightCm: 170,
+    });
+
+    expect(body.skinfoldMeasurements).toHaveLength(7);
+  });
+
+  it('updates an anthropometric assessment and replaces skinfold measurements', async () => {
+    const response = await request(app.getHttpServer())
+      .patch(
+        `/api/patients/${patientId}/medical-record/anthropometric-assessments/${anthropometricAssessmentId}`,
+      )
+      .set(
+        'Authorization',
+        `Bearer ${ownerTenantAccessToken}`,
+      )
+      .send({
+        weightKg: 75.9,
+        waistCircumferenceCm: 81.5,
+        skinfoldProtocol: 'JACKSON_POLLOCK_7',
+        skinfoldMeasurements: [
+          {
+            site: 'CHEST',
+            side: 'RIGHT',
+            readingNumber: 1,
+            valueMm: 11.8,
+          },
+          {
+            site: 'CHEST',
+            side: 'RIGHT',
+            readingNumber: 2,
+            valueMm: 11.6,
+          },
+          {
+            site: 'ABDOMEN',
+            side: 'RIGHT',
+            readingNumber: 1,
+            valueMm: 18.9,
+          },
+        ],
+        notes: '  Avaliação revisada.  ',
+      })
+      .expect(200);
+
+    const body =
+      response.body as AnthropometricAssessmentResponse;
+
+    expect(body).toMatchObject({
+      id: anthropometricAssessmentId,
+      weightKg: 75.9,
+      heightCm: 170,
+      waistCircumferenceCm: 81.5,
+      notes: 'Avaliação revisada.',
+    });
+
+    expect(body.skinfoldMeasurements).toHaveLength(3);
+
+    const persisted =
+      await prisma.anthropometricAssessment.findUnique({
+        where: {
+          id: anthropometricAssessmentId,
+        },
+        include: {
+          skinfoldMeasurements: true,
+        },
+      });
+
+    expect(
+      persisted?.skinfoldMeasurements,
+    ).toHaveLength(3);
+  });
+
+  it('rejects an anthropometric skinfold reading above the API limit', async () => {
+    const response = await request(app.getHttpServer())
+      .post(
+        `/api/patients/${patientId}/medical-record/anthropometric-assessments`,
+      )
+      .set(
+        'Authorization',
+        `Bearer ${ownerTenantAccessToken}`,
+      )
+      .send({
+        measuredAt: '2026-08-29',
+        skinfoldProtocol: 'JACKSON_POLLOCK_7',
+        skinfoldMeasurements: [
+          {
+            site: 'TRICEPS',
+            side: 'RIGHT',
+            readingNumber: 4,
+            valueMm: 12,
+          },
+        ],
+      })
+      .expect(400);
+
+    expect(response.body).toMatchObject({
+      statusCode: 400,
+      code: 'VALIDATION_ERROR',
+    });
+  });
+
+  it('does not expose anthropometric assessments from another organization', async () => {
+    const response = await request(app.getHttpServer())
+      .get(
+        `/api/patients/${secondOrganizationPatientId}/medical-record/anthropometric-assessments`,
+      )
+      .set(
+        'Authorization',
+        `Bearer ${ownerTenantAccessToken}`,
+      )
+      .expect(404);
+
+    expect(response.body).toMatchObject({
+      statusCode: 404,
+    });
+  });
+
   it('updates only the supplied clinical fields', async () => {
     const response = await request(
       app.getHttpServer(),
@@ -770,6 +1106,23 @@ describe('Medical Records (e2e)', () => {
     });
   });
 
+  it('rejects anthropometric assessment access by an assistant', async () => {
+    const response = await request(app.getHttpServer())
+      .get(
+        `/api/patients/${secondOrganizationPatientId}/medical-record/anthropometric-assessments`,
+      )
+      .set(
+        'Authorization',
+        `Bearer ${assistantTenantAccessToken}`,
+      )
+      .expect(403);
+
+    expect(response.body).toMatchObject({
+      statusCode: 403,
+      code: 'INSUFFICIENT_ROLE',
+    });
+  });
+
   it('rejects medical record access by an assistant', async () => {
     const response = await request(
       app.getHttpServer(),
@@ -810,6 +1163,27 @@ describe('Medical Records (e2e)', () => {
       statusCode: 403,
       code: 'INSUFFICIENT_ROLE',
     });
+  });
+
+  it('deletes an anthropometric assessment', async () => {
+    await request(app.getHttpServer())
+      .delete(
+        `/api/patients/${patientId}/medical-record/anthropometric-assessments/${anthropometricAssessmentId}`,
+      )
+      .set(
+        'Authorization',
+        `Bearer ${ownerTenantAccessToken}`,
+      )
+      .expect(204);
+
+    const persisted =
+      await prisma.anthropometricAssessment.findUnique({
+        where: {
+          id: anthropometricAssessmentId,
+        },
+      });
+
+    expect(persisted).toBeNull();
   });
 
   it('deletes a dietary restriction', async () => {
@@ -1003,6 +1377,17 @@ describe('Medical Records (e2e)', () => {
     });
 
     await prisma.medicalRecordDietaryRestriction.deleteMany({
+      where: {
+        organizationId: {
+          in: [
+            organizationId,
+            secondOrganizationId,
+          ],
+        },
+      },
+    });
+
+    await prisma.anthropometricAssessment.deleteMany({
       where: {
         organizationId: {
           in: [

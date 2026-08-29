@@ -76,6 +76,7 @@ model MedicalRecord {
   allergyEntries            MedicalRecordAllergy[]
   dietaryRestrictionEntries MedicalRecordDietaryRestriction[]
   laboratoryExams           LaboratoryExam[]
+  anthropometricAssessments AnthropometricAssessment[]
 
   @@unique([organizationId, patientId])
   @@index([organizationId])
@@ -756,6 +757,77 @@ model BiomarkerReferenceRange {
   @@map("biomarker_reference_ranges")
 }
 
+model AnthropometricAssessment {
+  id              String @id @default(uuid()) @db.Uuid
+  organizationId  String @db.Uuid
+  medicalRecordId String @db.Uuid
+  patientId       String @db.Uuid
+
+  measuredAt DateTime @db.Date
+
+  weightKg Decimal? @db.Decimal(6, 2)
+  heightCm Decimal? @db.Decimal(6, 2)
+
+  bodyFatPercentage Decimal? @db.Decimal(5, 2)
+  fatMassKg         Decimal? @db.Decimal(6, 2)
+  leanMassKg        Decimal? @db.Decimal(6, 2)
+  muscleMassKg      Decimal? @db.Decimal(6, 2)
+
+  waistCircumferenceCm   Decimal? @db.Decimal(6, 2)
+  hipCircumferenceCm     Decimal? @db.Decimal(6, 2)
+  abdomenCircumferenceCm Decimal? @db.Decimal(6, 2)
+  chestCircumferenceCm   Decimal? @db.Decimal(6, 2)
+  armCircumferenceCm     Decimal? @db.Decimal(6, 2)
+  thighCircumferenceCm   Decimal? @db.Decimal(6, 2)
+  calfCircumferenceCm    Decimal? @db.Decimal(6, 2)
+
+  bodyCompositionMethod BodyCompositionMethod?
+
+  skinfoldProtocol SkinfoldProtocol?
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  medicalRecord MedicalRecord @relation(fields: [medicalRecordId], references: [id], onDelete: Cascade)
+
+  skinfoldMeasurements AnthropometricSkinfoldMeasurement[]
+
+  @@index([organizationId])
+  @@index([medicalRecordId])
+  @@index([patientId])
+  @@index([organizationId, patientId])
+  @@index([measuredAt])
+  @@index([organizationId, patientId, measuredAt])
+  @@map("anthropometric_assessments")
+}
+
+model AnthropometricSkinfoldMeasurement {
+  id String @id @default(uuid()) @db.Uuid
+
+  anthropometricAssessmentId String @db.Uuid
+
+  site SkinfoldSite
+
+  side SkinfoldMeasurementSide @default(RIGHT)
+
+  readingNumber Int
+
+  valueMm Decimal @db.Decimal(6, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  anthropometricAssessment AnthropometricAssessment @relation(fields: [anthropometricAssessmentId], references: [id], onDelete: Cascade)
+
+  @@unique([anthropometricAssessmentId, site, side, readingNumber])
+  @@index([anthropometricAssessmentId])
+  @@index([site])
+  @@index([side])
+  @@map("anthropometric_skinfold_measurements")
+}
+
 model LaboratoryExam {
   id String @id @default(uuid()) @db.Uuid
 
@@ -820,6 +892,40 @@ model LaboratoryResult {
   @@index([name])
   @@index([interpretation])
   @@map("laboratory_results")
+}
+
+enum SkinfoldMeasurementSide {
+  RIGHT
+  LEFT
+}
+
+enum SkinfoldSite {
+  CHEST
+  MIDAXILLARY
+  TRICEPS
+  SUBSCAPULAR
+  ABDOMEN
+  SUPRAILIAC
+  THIGH
+
+  BICEPS
+  SUPRASPINALE
+  CALF
+
+  OTHER
+}
+
+enum SkinfoldProtocol {
+  JACKSON_POLLOCK_3
+  JACKSON_POLLOCK_7
+  OTHER
+}
+
+enum BodyCompositionMethod {
+  BIOIMPEDANCE
+  SKINFOLD
+  DEXA
+  OTHER
 }
 
 enum OrganizationStatus {
