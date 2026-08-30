@@ -806,6 +806,86 @@ describe('Medical Records (e2e)', () => {
     expect(body.skinfoldMeasurements).toHaveLength(7);
   });
 
+  it('returns calculated anthropometric assessment results with clinical context', async () => {
+    const response = await request(app.getHttpServer())
+      .get(
+        `/api/patients/${patientId}/medical-record/anthropometric-assessments/${anthropometricAssessmentId}/results`,
+      )
+      .set(
+        'Authorization',
+        `Bearer ${ownerTenantAccessToken}`,
+      )
+      .expect(200);
+
+    expect(response.body).toMatchObject({
+      assessment: {
+        id: anthropometricAssessmentId,
+        organizationId,
+        medicalRecordId,
+        patientId,
+        measuredAt: '2026-08-29',
+        weightKg: 76.7,
+        heightCm: 170,
+      },
+      clinicalContext: {
+        assessmentDate: '2026-08-29',
+        biologicalSex: 'MALE',
+        age: {
+          years: 36,
+          months: 4,
+          totalMonths: 436,
+        },
+        population: 'ADULT',
+        hasBirthDate: true,
+        hasBiologicalSex: true,
+      },
+      calculations: expect.arrayContaining([
+        expect.objectContaining({
+          code: 'BMI',
+          value: 26.54,
+          unit: 'kg/m²',
+          source: 'HIGEIA_CALCULATION',
+          method: 'WEIGHT_HEIGHT_BMI',
+        }),
+        expect.objectContaining({
+          code: 'BODY_DENSITY',
+          unit: 'g/mL',
+          source: 'HIGEIA_CALCULATION',
+          method: 'JACKSON_POLLOCK_7',
+        }),
+        expect.objectContaining({
+          code: 'BODY_FAT_PERCENTAGE',
+          unit: '%',
+          source: 'HIGEIA_CALCULATION',
+          method: 'SIRI',
+        }),
+        expect.objectContaining({
+          code: 'FAT_MASS_KG',
+          unit: 'kg',
+          source: 'HIGEIA_CALCULATION',
+          method: 'WEIGHT_BODY_FAT_PERCENTAGE',
+        }),
+        expect.objectContaining({
+          code: 'LEAN_MASS_KG',
+          unit: 'kg',
+          source: 'HIGEIA_CALCULATION',
+          method: 'WEIGHT_BODY_FAT_PERCENTAGE',
+        }),
+      ]),
+    });
+  });
+
+  it('does not expose anthropometric assessment results to another organization', async () => {
+    await request(app.getHttpServer())
+      .get(
+        `/api/patients/${secondOrganizationPatientId}/medical-record/anthropometric-assessments/${anthropometricAssessmentId}/results`,
+      )
+      .set(
+        'Authorization',
+        `Bearer ${ownerTenantAccessToken}`,
+      )
+      .expect(404);
+  });
   it('updates an anthropometric assessment and replaces skinfold measurements', async () => {
     const response = await request(app.getHttpServer())
       .patch(
@@ -1123,6 +1203,17 @@ describe('Medical Records (e2e)', () => {
     });
   });
 
+  it('rejects anthropometric assessment results access by an assistant', async () => {
+    await request(app.getHttpServer())
+      .get(
+        `/api/patients/${secondOrganizationPatientId}/medical-record/anthropometric-assessments/${anthropometricAssessmentId}/results`,
+      )
+      .set(
+        'Authorization',
+        `Bearer ${assistantTenantAccessToken}`,
+      )
+      .expect(403);
+  });
   it('rejects medical record access by an assistant', async () => {
     const response = await request(
       app.getHttpServer(),
@@ -1343,6 +1434,10 @@ describe('Medical Records (e2e)', () => {
             'Medical Records E2E Patient',
           email:
             `medical-patient-${randomUUID()}@higeia.test`,
+          birthDate:
+            new Date('1990-04-10T00:00:00.000Z'),
+          biologicalSex:
+            'MALE',
           status: PatientStatus.ACTIVE,
           createdAt: timestamp,
           updatedAt: timestamp,

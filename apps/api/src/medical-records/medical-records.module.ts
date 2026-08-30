@@ -35,6 +35,10 @@ import {
 } from '../patients/patients.module';
 
 import {
+  AnthropometricAssessmentResultsService,
+} from './application/services/anthropometric-assessment-results.service';
+
+import {
   AnthropometricAssessmentsService,
 } from './application/services/anthropometric-assessments.service';
 
@@ -175,6 +179,7 @@ import {
     MedicalRecordAllergiesService,
     MedicalRecordDietaryRestrictionsService,
     LaboratoryExamsService,
+    AnthropometricAssessmentResultsService,
     AnthropometricAssessmentsService,
 
     {

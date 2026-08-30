@@ -50,6 +50,10 @@ import {
 } from '../../application/services/anthropometric-assessments.service';
 
 import type {
+  AnthropometricAssessmentResults,
+} from '../../application/services/anthropometric-assessment-results.service';
+
+import type {
   AnthropometricAssessment,
 } from '../../domain/entities/anthropometric-assessment.entity';
 
@@ -60,6 +64,10 @@ import {
 import {
   AnthropometricAssessmentResponseDto,
 } from '../dto/responses/anthropometric-assessment-response.dto';
+
+import {
+  AnthropometricAssessmentResultsResponseDto,
+} from '../dto/responses/anthropometric-assessment-results-response.dto';
 
 import {
   UpdateAnthropometricAssessmentDto,
@@ -151,6 +159,46 @@ export class AnthropometricAssessmentsController {
     return this.service.listByPatient(
       patientId,
       currentUser.organizationId!,
+    );
+  }
+
+  @Get(
+    ':assessmentId/results',
+  )
+  @Roles(
+    MembershipRole.OWNER,
+    MembershipRole.ADMIN,
+    MembershipRole.NUTRITIONIST,
+  )
+  @ApiOperation({
+    summary:
+      'Consultar resultados calculados da avaliacao antropometrica',
+  })
+  @ApiOkResponse({
+    type:
+      AnthropometricAssessmentResultsResponseDto,
+  })
+  getResults(
+    @Param(
+      'patientId',
+      new ParseUUIDPipe(),
+    )
+    patientId: string,
+
+    @Param(
+      'assessmentId',
+      new ParseUUIDPipe(),
+    )
+    assessmentId: string,
+
+    @CurrentUser()
+    currentUser:
+      AuthenticatedRequestContext,
+  ): Promise<AnthropometricAssessmentResults> {
+    return this.service.getResults(
+      patientId,
+      currentUser.organizationId!,
+      assessmentId,
     );
   }
 

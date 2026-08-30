@@ -15,6 +15,20 @@ import {
 } from '../../domain/errors/medical-record-not-found.error';
 
 import {
+  Patient,
+  PatientBiologicalSex,
+  PatientStatus,
+} from '../../../patients/domain/entities/patient.entity';
+
+import {
+  PatientNotFoundError,
+} from '../../../patients/domain/errors/patient-not-found.error';
+
+import {
+  PatientsRepository,
+} from '../../../patients/domain/repositories/patients.repository';
+
+import {
   AnthropometricAssessmentsRepository,
 } from '../../domain/repositories/anthropometric-assessments.repository';
 
@@ -38,6 +52,9 @@ describe(
     let medicalRecordsRepository:
       jest.Mocked<MedicalRecordsRepository>;
 
+    let patientsRepository:
+      jest.Mocked<PatientsRepository>;
+
     const organizationId =
       '11111111-1111-4111-8111-111111111111';
 
@@ -49,6 +66,46 @@ describe(
 
     const assessmentId =
       '44444444-4444-4444-8444-444444444444';
+
+    const createPatient =
+      (
+        overrides:
+          Partial<Patient> = {},
+      ): Patient => ({
+        id:
+          patientId,
+
+        organizationId,
+
+        name:
+          'Paciente Teste',
+
+        cpf:
+          null,
+
+        email:
+          null,
+
+        phone:
+          null,
+
+        birthDate:
+          '1990-04-10',
+
+        biologicalSex:
+          PatientBiologicalSex.MALE,
+
+        status:
+          PatientStatus.ACTIVE,
+
+        createdAt:
+          '2026-01-01T00:00:00.000Z',
+
+        updatedAt:
+          '2026-01-01T00:00:00.000Z',
+
+        ...overrides,
+      });
 
     beforeEach(() => {
       anthropometricAssessmentsRepository = {
@@ -93,12 +150,211 @@ describe(
           createMedicalRecord(),
         );
 
+      patientsRepository = {
+        create:
+          jest.fn(),
+
+        listByOrganization:
+          jest.fn(),
+
+        findById:
+          jest.fn(),
+
+        findByEmail:
+          jest.fn(),
+
+        findByCpf:
+          jest.fn(),
+
+        update:
+          jest.fn(),
+      } as unknown as jest.Mocked<
+        PatientsRepository
+      >;
+
+
+      patientsRepository
+        .findById
+        .mockResolvedValue(
+          createPatient(),
+        );
+
       service =
         new AnthropometricAssessmentsService(
           anthropometricAssessmentsRepository,
           medicalRecordsRepository,
+          patientsRepository,
         );
     });
+
+    it(
+      'builds clinical context from patient data',
+      async () => {
+        const result =
+          await service.getClinicalContext(
+            patientId,
+            organizationId,
+            '2026-08-29',
+          );
+
+        expect(
+          patientsRepository.findById,
+        ).toHaveBeenCalledWith(
+          organizationId,
+          patientId,
+        );
+
+        expect(result).toEqual({
+          assessmentDate:
+            '2026-08-29',
+
+          biologicalSex:
+            PatientBiologicalSex.MALE,
+
+          age: {
+            years:
+              36,
+
+            months:
+              4,
+
+            totalMonths:
+              436,
+          },
+
+          population:
+            'ADULT',
+
+          hasBirthDate:
+            true,
+
+          hasBiologicalSex:
+            true,
+        });
+      },
+    );
+
+    it(
+      'builds unknown population when birth date is missing',
+      async () => {
+        patientsRepository
+          .findById
+          .mockResolvedValue(
+            createPatient({
+              birthDate:
+                null,
+            }),
+          );
+
+        const result =
+          await service.getClinicalContext(
+            patientId,
+            organizationId,
+            '2026-08-29',
+          );
+
+        expect(result.age).toBeNull();
+
+        expect(
+          result.population,
+        ).toBe(
+          'UNKNOWN',
+        );
+
+        expect(
+          result.biologicalSex,
+        ).toBe(
+          PatientBiologicalSex.MALE,
+        );
+
+        expect(
+          result.hasBirthDate,
+        ).toBe(
+          false,
+        );
+
+        expect(
+          result.hasBiologicalSex,
+        ).toBe(
+          true,
+        );
+      },
+    );
+
+    it(
+      'keeps age and population when biological sex is missing',
+      async () => {
+        patientsRepository
+          .findById
+          .mockResolvedValue(
+            createPatient({
+              biologicalSex:
+                null,
+            }),
+          );
+
+        const result =
+          await service.getClinicalContext(
+            patientId,
+            organizationId,
+            '2026-08-29',
+          );
+
+        expect(result.age).toEqual({
+          years:
+            36,
+
+          months:
+            4,
+
+          totalMonths:
+            436,
+        });
+
+        expect(
+          result.population,
+        ).toBe(
+          'ADULT',
+        );
+
+        expect(
+          result.biologicalSex,
+        ).toBeNull();
+
+        expect(
+          result.hasBirthDate,
+        ).toBe(
+          true,
+        );
+
+        expect(
+          result.hasBiologicalSex,
+        ).toBe(
+          false,
+        );
+      },
+    );
+
+    it(
+      'throws when patient does not exist while building clinical context',
+      async () => {
+        patientsRepository
+          .findById
+          .mockResolvedValue(
+            null,
+          );
+
+        await expect(
+          service.getClinicalContext(
+            patientId,
+            organizationId,
+            '2026-08-29',
+          ),
+        ).rejects.toBeInstanceOf(
+          PatientNotFoundError,
+        );
+      },
+    );
 
     it(
       'creates an anthropometric assessment',
@@ -942,6 +1198,169 @@ describe(
           ),
         ).rejects.toBeInstanceOf(
           MedicalRecordNotFoundError,
+        );
+      },
+    );
+
+    it(
+      'returns calculated anthropometric results',
+      async () => {
+        const assessment = {
+          ...createAssessment(),
+
+          weightKg:
+            77,
+
+          heightCm:
+            170,
+
+          measuredAt:
+            '2026-08-29',
+        };
+
+        anthropometricAssessmentsRepository
+          .findById
+          .mockResolvedValue(
+            assessment,
+          );
+
+        const result =
+          await service.getResults(
+            patientId,
+            organizationId,
+            assessment.id,
+          );
+
+        expect(
+          patientsRepository.findById,
+        ).toHaveBeenCalledWith(
+          organizationId,
+          patientId,
+        );
+
+        expect(
+          result.assessment,
+        ).toEqual(
+          assessment,
+        );
+
+        expect(
+          result.clinicalContext,
+        ).toEqual({
+          assessmentDate:
+            '2026-08-29',
+
+          biologicalSex:
+            PatientBiologicalSex.MALE,
+
+          age: {
+            years:
+              36,
+
+            months:
+              4,
+
+            totalMonths:
+              436,
+          },
+
+          population:
+            'ADULT',
+
+          hasBirthDate:
+            true,
+
+          hasBiologicalSex:
+            true,
+        });
+
+        expect(
+          result.calculations,
+        ).toEqual([
+          {
+            code:
+              'BMI',
+
+            value:
+              26.64,
+
+            unit:
+              'kg/m²',
+
+            source:
+              'HIGEIA_CALCULATION',
+
+            method:
+              'WEIGHT_HEIGHT_BMI',
+          },
+        ]);
+      },
+    );
+
+    it(
+      'returns anthropometric results without BMI when required measurements are missing',
+      async () => {
+        const assessment = {
+          ...createAssessment(),
+
+          weightKg:
+            77,
+
+          heightCm:
+            null,
+        };
+
+        anthropometricAssessmentsRepository
+          .findById
+          .mockResolvedValue(
+            assessment,
+          );
+
+        const result =
+          await service.getResults(
+            patientId,
+            organizationId,
+            assessment.id,
+          );
+
+        expect(
+          result.assessment,
+        ).toEqual(
+          assessment,
+        );
+
+        expect(
+          result.calculations,
+        ).toEqual([]);
+      },
+    );
+
+    it(
+      'throws when patient does not exist while getting anthropometric results',
+      async () => {
+        const assessment =
+          createAssessment();
+
+        anthropometricAssessmentsRepository
+          .findById
+          .mockResolvedValue(
+            assessment,
+          );
+
+        patientsRepository
+          .findById
+          .mockResolvedValue(
+            null,
+          );
+
+        await expect(
+          service.getResults(
+            patientId,
+            organizationId,
+            assessment.id,
+          ),
+        ).rejects.toBeInstanceOf(
+          PatientNotFoundError,
         );
       },
     );

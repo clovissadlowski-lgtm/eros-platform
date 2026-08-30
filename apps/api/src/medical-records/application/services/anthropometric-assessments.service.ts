@@ -8,6 +8,14 @@ import {
 } from 'node:crypto';
 
 import {
+  PatientNotFoundError,
+} from '../../../patients/domain/errors/patient-not-found.error';
+
+import {
+  PatientsRepository,
+} from '../../../patients/domain/repositories/patients.repository';
+
+import {
   AnthropometricAssessment,
   AnthropometricSkinfoldMeasurement,
   BodyCompositionMethod,
@@ -27,6 +35,16 @@ import {
 import {
   MedicalRecordsRepository,
 } from '../../domain/repositories/medical-records.repository';
+
+import {
+  AnthropometricClinicalContext,
+  AnthropometricClinicalContextService,
+} from '../../domain/services/anthropometric-clinical-context.service';
+
+import {
+  AnthropometricAssessmentResults,
+  AnthropometricAssessmentResultsService,
+} from './anthropometric-assessment-results.service';
 
 export interface AnthropometricSkinfoldMeasurementInput {
   site:
@@ -156,13 +174,58 @@ export interface UpdateAnthropometricAssessmentInput {
 
 @Injectable()
 export class AnthropometricAssessmentsService {
+  private readonly anthropometricClinicalContextService =
+    new AnthropometricClinicalContextService();
+
   constructor(
+
     private readonly anthropometricAssessmentsRepository:
       AnthropometricAssessmentsRepository,
 
     private readonly medicalRecordsRepository:
       MedicalRecordsRepository,
+  
+    private readonly patientsRepository:
+      PatientsRepository,
+
+    private readonly anthropometricAssessmentResultsService:
+      AnthropometricAssessmentResultsService =
+        new AnthropometricAssessmentResultsService(),
   ) {}
+
+  async getClinicalContext(
+    patientId: string,
+    organizationId: string,
+    assessmentDate: string,
+  ): Promise<AnthropometricClinicalContext> {
+    const patient =
+      await this.patientsRepository.findById(
+        organizationId,
+        patientId,
+      );
+
+    if (!patient) {
+      throw new PatientNotFoundError();
+    }
+
+    const normalizedAssessmentDate =
+      this.normalizeRequiredDate(
+        assessmentDate,
+      );
+
+    return this
+      .anthropometricClinicalContextService
+      .build({
+        birthDate:
+          patient.birthDate,
+
+        biologicalSex:
+          patient.biologicalSex,
+
+        assessmentDate:
+          normalizedAssessmentDate,
+      });
+  }
 
   async create(
     patientId: string,
@@ -371,6 +434,36 @@ export class AnthropometricAssessmentsService {
     }
 
     return assessment;
+  }
+
+  async getResults(
+    patientId: string,
+    organizationId: string,
+    assessmentId: string,
+  ): Promise<AnthropometricAssessmentResults> {
+    const assessment =
+      await this.findById(
+        patientId,
+        organizationId,
+        assessmentId,
+      );
+
+    const patient =
+      await this.patientsRepository.findById(
+        organizationId,
+        patientId,
+      );
+
+    if (!patient) {
+      throw new PatientNotFoundError();
+    }
+
+    return this
+      .anthropometricAssessmentResultsService
+      .build(
+        assessment,
+        patient,
+      );
   }
 
   async update(

@@ -54,11 +54,13 @@ import {
 import {
   HealthConditionsCard,
 } from '@/modules/medical-records/health-conditions-card';
+import {
+  AnthropometricAssessmentsCard,
+} from '@/modules/medical-records/anthropometric-assessments-card';
 
 import {
   LaboratoryExamsCard,
 } from '@/modules/medical-records/laboratory-exams-card';
-
 import {
   MedicationsCard,
 } from '@/modules/medical-records/medications-card';
@@ -1115,6 +1117,12 @@ export function PatientProfileScreen({
       />
 
       <DietaryRestrictionsCard
+        patientId={
+          patient.id
+        }
+      />
+
+      <AnthropometricAssessmentsCard
         patientId={
           patient.id
         }

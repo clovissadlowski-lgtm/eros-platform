@@ -605,3 +605,146 @@ export interface UpdateLaboratoryResultInput {
   interpretation?:
     LaboratoryResultInterpretation | null;
 }
+
+// -----------------------------------------------------------------------------
+// ANTHROPOMETRIC ASSESSMENTS
+// -----------------------------------------------------------------------------
+
+export type BodyCompositionMethod =
+  | 'BIOIMPEDANCE'
+  | 'SKINFOLD'
+  | 'DEXA'
+  | 'OTHER';
+
+export type SkinfoldMeasurementSide =
+  | 'RIGHT'
+  | 'LEFT';
+
+export type SkinfoldSite =
+  | 'CHEST'
+  | 'MIDAXILLARY'
+  | 'TRICEPS'
+  | 'SUBSCAPULAR'
+  | 'ABDOMEN'
+  | 'SUPRAILIAC'
+  | 'THIGH'
+  | 'BICEPS'
+  | 'SUPRASPINALE'
+  | 'CALF'
+  | 'OTHER';
+
+export type SkinfoldProtocol =
+  | 'JACKSON_POLLOCK_3'
+  | 'JACKSON_POLLOCK_7'
+  | 'OTHER';
+
+export interface AnthropometricSkinfoldMeasurement {
+  id: string;
+  anthropometricAssessmentId: string;
+
+  site: SkinfoldSite;
+  side: SkinfoldMeasurementSide;
+
+  readingNumber: number;
+  valueMm: number;
+
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AnthropometricAssessment {
+  id: string;
+
+  organizationId: string;
+  medicalRecordId: string;
+  patientId: string;
+
+  measuredAt: string;
+
+  weightKg: number | null;
+  heightCm: number | null;
+
+  bodyFatPercentage: number | null;
+  fatMassKg: number | null;
+  leanMassKg: number | null;
+  muscleMassKg: number | null;
+
+  waistCircumferenceCm: number | null;
+  hipCircumferenceCm: number | null;
+  abdomenCircumferenceCm: number | null;
+  chestCircumferenceCm: number | null;
+  armCircumferenceCm: number | null;
+  thighCircumferenceCm: number | null;
+  calfCircumferenceCm: number | null;
+
+  bodyCompositionMethod: BodyCompositionMethod | null;
+  skinfoldProtocol: SkinfoldProtocol | null;
+
+  skinfoldMeasurements: AnthropometricSkinfoldMeasurement[];
+
+  notes: string | null;
+
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AnthropometricSkinfoldMeasurementInput {
+  site: SkinfoldSite;
+  side?: SkinfoldMeasurementSide;
+  readingNumber: number;
+  valueMm: number;
+}
+
+export interface CreateAnthropometricAssessmentInput {
+  measuredAt: string;
+
+  weightKg?: number;
+  heightCm?: number;
+
+  bodyFatPercentage?: number;
+  fatMassKg?: number;
+  leanMassKg?: number;
+  muscleMassKg?: number;
+
+  waistCircumferenceCm?: number;
+  hipCircumferenceCm?: number;
+  abdomenCircumferenceCm?: number;
+  chestCircumferenceCm?: number;
+  armCircumferenceCm?: number;
+  thighCircumferenceCm?: number;
+  calfCircumferenceCm?: number;
+
+  bodyCompositionMethod?: BodyCompositionMethod;
+  skinfoldProtocol?: SkinfoldProtocol;
+
+  skinfoldMeasurements?: AnthropometricSkinfoldMeasurementInput[];
+
+  notes?: string;
+}
+
+export interface UpdateAnthropometricAssessmentInput {
+  measuredAt?: string;
+
+  weightKg?: number | null;
+  heightCm?: number | null;
+
+  bodyFatPercentage?: number | null;
+  fatMassKg?: number | null;
+  leanMassKg?: number | null;
+  muscleMassKg?: number | null;
+
+  waistCircumferenceCm?: number | null;
+  hipCircumferenceCm?: number | null;
+  abdomenCircumferenceCm?: number | null;
+  chestCircumferenceCm?: number | null;
+  armCircumferenceCm?: number | null;
+  thighCircumferenceCm?: number | null;
+  calfCircumferenceCm?: number | null;
+
+  bodyCompositionMethod?: BodyCompositionMethod | null;
+  skinfoldProtocol?: SkinfoldProtocol | null;
+
+  skinfoldMeasurements?: AnthropometricSkinfoldMeasurementInput[];
+
+  notes?: string | null;
+}
