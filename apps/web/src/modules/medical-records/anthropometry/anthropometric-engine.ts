@@ -846,3 +846,483 @@ export function buildAnthropometricDataQualityAlerts(
 
   return alerts;
 }
+
+export interface AnthropometricLongitudinalEntry {
+  assessment: AnthropometricAssessment;
+  results?: AnthropometricAssessmentResults;
+}
+
+type LongitudinalDirection =
+  | 'INCREASE'
+  | 'DECREASE'
+  | 'STABLE';
+
+interface LongitudinalSeriesPoint {
+  measuredAt: string;
+  value: number;
+}
+
+interface LongitudinalSeriesAnalysis {
+  value: string;
+  description: string;
+}
+
+function getLongitudinalDirection(
+  difference: number,
+  stableTolerance: number,
+): LongitudinalDirection {
+  if (
+    Math.abs(difference) <=
+    stableTolerance
+  ) {
+    return 'STABLE';
+  }
+
+  return difference > 0
+    ? 'INCREASE'
+    : 'DECREASE';
+}
+
+function analyzeLongitudinalSeries(
+  points: LongitudinalSeriesPoint[],
+  stableTolerance: number,
+  metricLabel: string,
+): LongitudinalSeriesAnalysis | null {
+  if (points.length < 3) {
+    return null;
+  }
+
+  const differences =
+    points
+      .slice(1)
+      .map(
+        (point, index) =>
+          point.value -
+          points[index].value,
+      );
+
+  const directions =
+    differences.map(
+      (difference) =>
+        getLongitudinalDirection(
+          difference,
+          stableTolerance,
+        ),
+    );
+
+  const nonStableDirections =
+    directions.filter(
+      (
+        direction,
+      ): direction is
+        | 'INCREASE'
+        | 'DECREASE' =>
+        direction !==
+        'STABLE',
+    );
+
+  if (
+    nonStableDirections.length ===
+    0
+  ) {
+    return {
+      value:
+        'Trajetória estável',
+      description:
+        `As últimas ${points.length} avaliações disponíveis de ${metricLabel} permaneceram dentro da faixa de estabilidade definida pela Higeia.`,
+    };
+  }
+
+  const allIncrease =
+    nonStableDirections.every(
+      (direction) =>
+        direction ===
+        'INCREASE',
+    );
+
+  const allDecrease =
+    nonStableDirections.every(
+      (direction) =>
+        direction ===
+        'DECREASE',
+    );
+
+  if (
+    allIncrease ||
+    allDecrease
+  ) {
+    const hasStableInterval =
+      directions.some(
+        (direction) =>
+          direction ===
+          'STABLE',
+      );
+
+    return {
+      value:
+        allIncrease
+          ? hasStableInterval
+            ? 'Trajetória predominantemente crescente'
+            : 'Trajetória consistentemente crescente'
+          : hasStableInterval
+            ? 'Trajetória predominantemente decrescente'
+            : 'Trajetória consistentemente decrescente',
+      description:
+        `Leitura longitudinal baseada em ${points.length} avaliações disponíveis de ${metricLabel}, sem atribuição de causa clínica.`,
+    };
+  }
+
+  const latestDirection =
+    [...directions]
+      .reverse()
+      .find(
+        (
+          direction,
+        ) =>
+          direction !==
+          'STABLE',
+      );
+
+  const earlierNonStableDirections =
+    directions
+      .slice(
+        0,
+        -1,
+      )
+      .filter(
+        (
+          direction,
+        ): direction is
+          | 'INCREASE'
+          | 'DECREASE' =>
+          direction !==
+          'STABLE',
+      );
+
+  if (
+    latestDirection &&
+    earlierNonStableDirections.length >
+      0 &&
+    earlierNonStableDirections.every(
+      (direction) =>
+        direction ===
+        earlierNonStableDirections[0],
+    ) &&
+    latestDirection !==
+      earlierNonStableDirections[0]
+  ) {
+    return {
+      value:
+        'Mudança recente de direção',
+      description:
+        `A sequência de ${metricLabel} mudou de direção na avaliação mais recente. A Higeia descreve a trajetória, sem inferir a causa da mudança.`,
+    };
+  }
+
+  return {
+    value:
+      'Trajetória oscilante',
+    description:
+      `As últimas ${points.length} avaliações disponíveis de ${metricLabel} alternaram direção, sem uma tendência única consistente.`,
+  };
+}
+
+function hasSuspiciousLongitudinalWeightVariation(
+  points: LongitudinalSeriesPoint[],
+): boolean {
+  for (
+    let index = 1;
+    index < points.length;
+    index += 1
+  ) {
+    const previous =
+      points[index - 1].value;
+    const current =
+      points[index].value;
+
+    if (previous <= 0) {
+      continue;
+    }
+
+    const variationPercentage =
+      Math.abs(
+        current -
+        previous,
+      ) /
+      previous *
+      100;
+
+    if (
+      variationPercentage >=
+      7
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function hasSuspiciousLongitudinalWaistVariation(
+  points: LongitudinalSeriesPoint[],
+): boolean {
+  for (
+    let index = 1;
+    index < points.length;
+    index += 1
+  ) {
+    const difference =
+      points[index].value -
+      points[index - 1].value;
+
+    if (
+      Math.abs(
+        difference,
+      ) >=
+      10
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+export function buildAnthropometricLongitudinalInsights(
+  entries: AnthropometricLongitudinalEntry[],
+): AnthropometricContextInsight[] {
+  if (entries.length < 3) {
+    return [];
+  }
+
+  const orderedEntries =
+    [...entries].sort(
+      (
+        first,
+        second,
+      ) =>
+        new Date(
+          first.assessment.measuredAt,
+        ).getTime() -
+        new Date(
+          second.assessment.measuredAt,
+        ).getTime(),
+    );
+
+  const insights:
+    AnthropometricContextInsight[] = [];
+
+  const weightPoints =
+    orderedEntries
+      .filter(
+        (
+          entry,
+        ) =>
+          entry.assessment.weightKg !==
+          null,
+      )
+      .map(
+        (
+          entry,
+        ) => ({
+          measuredAt:
+            entry.assessment.measuredAt,
+          value:
+            entry.assessment.weightKg as number,
+        }),
+      );
+
+  if (weightPoints.length >= 3) {
+    if (
+      hasSuspiciousLongitudinalWeightVariation(
+        weightPoints,
+      )
+    ) {
+      insights.push({
+        code:
+          'LONGITUDINAL_WEIGHT_DATA_LIMIT',
+        label:
+          'Leitura longitudinal do peso',
+        value:
+          'Leitura limitada por variação atípica',
+        description:
+          'A Higeia não classificou a trajetória longitudinal do peso porque existe ao menos uma variação de 7% ou mais entre avaliações consecutivas. Recomenda-se conferir datas, medição e registro antes de interpretar a série.',
+      });
+    } else {
+      const analysis =
+        analyzeLongitudinalSeries(
+          weightPoints,
+          0.1,
+          'peso',
+        );
+
+      if (analysis) {
+        insights.push({
+          code:
+            'LONGITUDINAL_WEIGHT_TREND',
+          label:
+            'Trajetória longitudinal do peso',
+          value:
+            analysis.value,
+          description:
+            analysis.description,
+        });
+      }
+    }
+  }
+
+  const waistPoints =
+    orderedEntries
+      .map(
+        (
+          entry,
+        ) => ({
+          measuredAt:
+            entry.assessment.measuredAt,
+          value:
+            getCircumferenceValue(
+              entry.assessment,
+              'WAIST',
+              'NOT_APPLICABLE',
+              'NOT_APPLICABLE',
+            ),
+        }),
+      )
+      .filter(
+        (
+          point,
+        ): point is LongitudinalSeriesPoint =>
+          point.value !==
+          null,
+      );
+
+  if (waistPoints.length >= 3) {
+    if (
+      hasSuspiciousLongitudinalWaistVariation(
+        waistPoints,
+      )
+    ) {
+      insights.push({
+        code:
+          'LONGITUDINAL_WAIST_DATA_LIMIT',
+        label:
+          'Leitura longitudinal da cintura',
+        value:
+          'Leitura limitada por variação atípica',
+        description:
+          'A Higeia não classificou a trajetória longitudinal da cintura porque existe ao menos uma variação de 10 cm ou mais entre avaliações consecutivas. Recomenda-se conferir ponto anatômico, técnica e registro.',
+      });
+    } else {
+      const analysis =
+        analyzeLongitudinalSeries(
+          waistPoints,
+          0.5,
+          'cintura',
+        );
+
+      if (analysis) {
+        insights.push({
+          code:
+            'LONGITUDINAL_WAIST_TREND',
+          label:
+            'Trajetória longitudinal da cintura',
+          value:
+            analysis.value,
+          description:
+            analysis.description,
+        });
+      }
+    }
+  }
+
+  const bodyFatEntries =
+    orderedEntries
+      .map(
+        (
+          entry,
+        ) => ({
+          measuredAt:
+            entry.assessment.measuredAt,
+          observation:
+            getBodyFatObservation(
+              entry.assessment,
+              entry.results,
+            ),
+        }),
+      )
+      .filter(
+        (
+          entry,
+        ) =>
+          entry.observation.value !==
+          null,
+      );
+
+  if (
+    bodyFatEntries.length >=
+    3
+  ) {
+    const referenceObservation =
+      bodyFatEntries[0]
+        .observation;
+
+    const bodyFatComparable =
+      bodyFatEntries.every(
+        (
+          entry,
+        ) =>
+          areBodyFatObservationsComparable(
+            entry.observation,
+            referenceObservation,
+          ),
+      );
+
+    if (!bodyFatComparable) {
+      insights.push({
+        code:
+          'LONGITUDINAL_BODY_FAT_COMPARABILITY_LIMIT',
+        label:
+          'Trajetória longitudinal da gordura corporal',
+        value:
+          'Comparação longitudinal limitada por mudança de método',
+        description:
+          'A Higeia não classificou a trajetória do percentual de gordura porque a origem ou o método não permaneceu comparável ao longo da série.',
+      });
+    } else {
+      const bodyFatPoints =
+        bodyFatEntries.map(
+          (
+            entry,
+          ) => ({
+            measuredAt:
+              entry.measuredAt,
+            value:
+              entry.observation.value as number,
+          }),
+        );
+
+      const analysis =
+        analyzeLongitudinalSeries(
+          bodyFatPoints,
+          0.2,
+          'percentual de gordura',
+        );
+
+      if (analysis) {
+        insights.push({
+          code:
+            'LONGITUDINAL_BODY_FAT_TREND',
+          label:
+            'Trajetória longitudinal da gordura corporal',
+          value:
+            analysis.value,
+          description:
+            analysis.description,
+        });
+      }
+    }
+  }
+
+  return insights;
+}
+

@@ -11,6 +11,7 @@ import type {
 
 import {
   buildAnthropometricContextInsights,
+  buildAnthropometricLongitudinalInsights,
   buildAnthropometricDataQualityAlerts,
   calculateRatio,
   getAdultBmiClassification,
@@ -894,5 +895,437 @@ describe(
 
       },
     );
+
+    describe(
+      'buildAnthropometricLongitudinalInsights',
+      () => {
+        it(
+          'não gera leitura longitudinal com menos de três avaliações',
+          () => {
+            const insights =
+              buildAnthropometricLongitudinalInsights([
+                {
+                  assessment:
+                    createAssessment({
+                      measuredAt:
+                        '2026-01-01',
+                      weightKg:
+                        80,
+                    }),
+                },
+                {
+                  assessment:
+                    createAssessment({
+                      measuredAt:
+                        '2026-02-01',
+                      weightKg:
+                        79,
+                    }),
+                },
+              ]);
+
+            expect(
+              insights,
+            ).toEqual(
+              [],
+            );
+          },
+        );
+
+        it(
+          'identifica trajetória consistentemente decrescente do peso',
+          () => {
+            const insights =
+              buildAnthropometricLongitudinalInsights([
+                {
+                  assessment:
+                    createAssessment({
+                      measuredAt:
+                        '2026-01-01',
+                      weightKg:
+                        80,
+                    }),
+                },
+                {
+                  assessment:
+                    createAssessment({
+                      measuredAt:
+                        '2026-02-01',
+                      weightKg:
+                        79,
+                    }),
+                },
+                {
+                  assessment:
+                    createAssessment({
+                      measuredAt:
+                        '2026-03-01',
+                      weightKg:
+                        78,
+                    }),
+                },
+              ]);
+
+            expect(
+              insights.find(
+                (
+                  insight,
+                ) =>
+                  insight.code ===
+                  'LONGITUDINAL_WEIGHT_TREND',
+              )?.value,
+            ).toBe(
+              'Trajetória consistentemente decrescente',
+            );
+          },
+        );
+
+        it(
+          'identifica estabilidade longitudinal da cintura',
+          () => {
+            const insights =
+              buildAnthropometricLongitudinalInsights([
+                {
+                  assessment:
+                    createAssessment({
+                      measuredAt:
+                        '2026-01-01',
+                      waistCircumferenceCm:
+                        90,
+                    }),
+                },
+                {
+                  assessment:
+                    createAssessment({
+                      measuredAt:
+                        '2026-02-01',
+                      waistCircumferenceCm:
+                        90.3,
+                    }),
+                },
+                {
+                  assessment:
+                    createAssessment({
+                      measuredAt:
+                        '2026-03-01',
+                      waistCircumferenceCm:
+                        90.1,
+                    }),
+                },
+              ]);
+
+            expect(
+              insights.find(
+                (
+                  insight,
+                ) =>
+                  insight.code ===
+                  'LONGITUDINAL_WAIST_TREND',
+              )?.value,
+            ).toBe(
+              'Trajetória estável',
+            );
+          },
+        );
+
+        it(
+          'identifica mudança recente de direção',
+          () => {
+            const insights =
+              buildAnthropometricLongitudinalInsights([
+                {
+                  assessment:
+                    createAssessment({
+                      measuredAt:
+                        '2026-01-01',
+                      weightKg:
+                        80,
+                    }),
+                },
+                {
+                  assessment:
+                    createAssessment({
+                      measuredAt:
+                        '2026-02-01',
+                      weightKg:
+                        79,
+                    }),
+                },
+                {
+                  assessment:
+                    createAssessment({
+                      measuredAt:
+                        '2026-03-01',
+                      weightKg:
+                        78,
+                    }),
+                },
+                {
+                  assessment:
+                    createAssessment({
+                      measuredAt:
+                        '2026-04-01',
+                      weightKg:
+                        79,
+                    }),
+                },
+              ]);
+
+            expect(
+              insights.find(
+                (
+                  insight,
+                ) =>
+                  insight.code ===
+                  'LONGITUDINAL_WEIGHT_TREND',
+              )?.value,
+            ).toBe(
+              'Mudança recente de direção',
+            );
+          },
+        );
+
+        it(
+          'bloqueia leitura longitudinal do peso diante de variação atípica',
+          () => {
+            const insights =
+              buildAnthropometricLongitudinalInsights([
+                {
+                  assessment:
+                    createAssessment({
+                      measuredAt:
+                        '2026-01-01',
+                      weightKg:
+                        80,
+                    }),
+                },
+                {
+                  assessment:
+                    createAssessment({
+                      measuredAt:
+                        '2026-02-01',
+                      weightKg:
+                        86,
+                    }),
+                },
+                {
+                  assessment:
+                    createAssessment({
+                      measuredAt:
+                        '2026-03-01',
+                      weightKg:
+                        85,
+                    }),
+                },
+              ]);
+
+            expect(
+              insights.some(
+                (
+                  insight,
+                ) =>
+                  insight.code ===
+                  'LONGITUDINAL_WEIGHT_TREND',
+              ),
+            ).toBe(
+              false,
+            );
+
+            expect(
+              insights.find(
+                (
+                  insight,
+                ) =>
+                  insight.code ===
+                  'LONGITUDINAL_WEIGHT_DATA_LIMIT',
+              )?.value,
+            ).toBe(
+              'Leitura limitada por variação atípica',
+            );
+          },
+        );
+
+        it(
+          'bloqueia leitura longitudinal da cintura diante de salto de 10 cm ou mais',
+          () => {
+            const insights =
+              buildAnthropometricLongitudinalInsights([
+                {
+                  assessment:
+                    createAssessment({
+                      measuredAt:
+                        '2026-01-01',
+                      waistCircumferenceCm:
+                        90,
+                    }),
+                },
+                {
+                  assessment:
+                    createAssessment({
+                      measuredAt:
+                        '2026-02-01',
+                      waistCircumferenceCm:
+                        78,
+                    }),
+                },
+                {
+                  assessment:
+                    createAssessment({
+                      measuredAt:
+                        '2026-03-01',
+                      waistCircumferenceCm:
+                        77,
+                    }),
+                },
+              ]);
+
+            expect(
+              insights.some(
+                (
+                  insight,
+                ) =>
+                  insight.code ===
+                  'LONGITUDINAL_WAIST_TREND',
+              ),
+            ).toBe(
+              false,
+            );
+
+            expect(
+              insights.some(
+                (
+                  insight,
+                ) =>
+                  insight.code ===
+                  'LONGITUDINAL_WAIST_DATA_LIMIT',
+              ),
+            ).toBe(
+              true,
+            );
+          },
+        );
+
+        it(
+          'mantém trajetória longitudinal de gordura quando origem e método são comparáveis',
+          () => {
+            const insights =
+              buildAnthropometricLongitudinalInsights([
+                {
+                  assessment:
+                    createAssessment({
+                      measuredAt:
+                        '2026-01-01',
+                      bodyFatPercentage:
+                        22,
+                      bodyCompositionMethod:
+                        'BIOIMPEDANCE',
+                    }),
+                },
+                {
+                  assessment:
+                    createAssessment({
+                      measuredAt:
+                        '2026-02-01',
+                      bodyFatPercentage:
+                        21,
+                      bodyCompositionMethod:
+                        'BIOIMPEDANCE',
+                    }),
+                },
+                {
+                  assessment:
+                    createAssessment({
+                      measuredAt:
+                        '2026-03-01',
+                      bodyFatPercentage:
+                        20,
+                      bodyCompositionMethod:
+                        'BIOIMPEDANCE',
+                    }),
+                },
+              ]);
+
+            expect(
+              insights.find(
+                (
+                  insight,
+                ) =>
+                  insight.code ===
+                  'LONGITUDINAL_BODY_FAT_TREND',
+              )?.value,
+            ).toBe(
+              'Trajetória consistentemente decrescente',
+            );
+          },
+        );
+
+        it(
+          'bloqueia trajetória longitudinal de gordura quando o método muda',
+          () => {
+            const insights =
+              buildAnthropometricLongitudinalInsights([
+                {
+                  assessment:
+                    createAssessment({
+                      measuredAt:
+                        '2026-01-01',
+                      bodyFatPercentage:
+                        22,
+                      bodyCompositionMethod:
+                        'BIOIMPEDANCE',
+                    }),
+                },
+                {
+                  assessment:
+                    createAssessment({
+                      measuredAt:
+                        '2026-02-01',
+                      bodyFatPercentage:
+                        21,
+                      bodyCompositionMethod:
+                        'BIOIMPEDANCE',
+                    }),
+                },
+                {
+                  assessment:
+                    createAssessment({
+                      measuredAt:
+                        '2026-03-01',
+                      bodyFatPercentage:
+                        19,
+                      bodyCompositionMethod:
+                        'SKINFOLD',
+                    }),
+                },
+              ]);
+
+            expect(
+              insights.some(
+                (
+                  insight,
+                ) =>
+                  insight.code ===
+                  'LONGITUDINAL_BODY_FAT_TREND',
+              ),
+            ).toBe(
+              false,
+            );
+
+            expect(
+              insights.find(
+                (
+                  insight,
+                ) =>
+                  insight.code ===
+                  'LONGITUDINAL_BODY_FAT_COMPARABILITY_LIMIT',
+              )?.value,
+            ).toBe(
+              'Comparação longitudinal limitada por mudança de método',
+            );
+          },
+        );
+      },
+    );
+
   },
 );
