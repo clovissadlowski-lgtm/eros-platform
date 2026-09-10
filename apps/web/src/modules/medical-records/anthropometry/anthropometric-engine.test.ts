@@ -734,6 +734,164 @@ describe(
             );
           },
         );
+
+        it(
+          'não calcula tendência de gordura quando o método muda entre avaliações',
+          () => {
+            const previous =
+              createAssessment({
+                bodyFatPercentage:
+                  20,
+                bodyCompositionMethod:
+                  'BIOIMPEDANCE',
+              });
+
+            const current =
+              createAssessment({
+                bodyFatPercentage:
+                  18,
+                bodyCompositionMethod:
+                  'SKINFOLD',
+              });
+
+            const insights =
+              buildAnthropometricContextInsights(
+                current,
+                previous,
+                undefined,
+                undefined,
+              );
+
+            expect(
+              insights.some(
+                (
+                  insight,
+                ) =>
+                  insight.code ===
+                  'BODY_FAT_TREND',
+              ),
+            ).toBe(
+              false,
+            );
+
+            expect(
+              insights.find(
+                (
+                  insight,
+                ) =>
+                  insight.code ===
+                  'BODY_FAT_COMPARABILITY_LIMIT',
+              )?.value,
+            ).toBe(
+              'Comparação limitada por mudança de método',
+            );
+          },
+        );
+
+        it(
+          'mantém tendência de gordura quando origem e método são comparáveis',
+          () => {
+            const previous =
+              createAssessment({
+                bodyFatPercentage:
+                  20,
+                bodyCompositionMethod:
+                  'BIOIMPEDANCE',
+              });
+
+            const current =
+              createAssessment({
+                bodyFatPercentage:
+                  18,
+                bodyCompositionMethod:
+                  'BIOIMPEDANCE',
+              });
+
+            const insights =
+              buildAnthropometricContextInsights(
+                current,
+                previous,
+                undefined,
+                undefined,
+              );
+
+            expect(
+              insights.find(
+                (
+                  insight,
+                ) =>
+                  insight.code ===
+                  'BODY_FAT_TREND',
+              )?.value,
+            ).toBe(
+              'Redução de 2 p.p.',
+            );
+          },
+        );
+
+        it(
+          'suprime interpretações combinadas com gordura quando o método muda',
+          () => {
+            const previous =
+              createAssessment({
+                weightKg:
+                  75,
+                waistCircumferenceCm:
+                  90,
+                bodyFatPercentage:
+                  20,
+                bodyCompositionMethod:
+                  'BIOIMPEDANCE',
+              });
+
+            const current =
+              createAssessment({
+                weightKg:
+                  76,
+                waistCircumferenceCm:
+                  88,
+                bodyFatPercentage:
+                  18,
+                bodyCompositionMethod:
+                  'SKINFOLD',
+              });
+
+            const insights =
+              buildAnthropometricContextInsights(
+                current,
+                previous,
+                undefined,
+                undefined,
+              );
+
+            expect(
+              insights.some(
+                (
+                  insight,
+                ) =>
+                  insight.code ===
+                  'WEIGHT_BODY_FAT_COMBINED_TREND' ||
+                  insight.code ===
+                  'WAIST_BODY_FAT_COMBINED_TREND',
+              ),
+            ).toBe(
+              false,
+            );
+
+            expect(
+              insights.some(
+                (
+                  insight,
+                ) =>
+                  insight.code ===
+                  'WEIGHT_WAIST_COMBINED_TREND',
+              ),
+            ).toBe(
+              true,
+            );
+          },
+        );
+
       },
     );
   },

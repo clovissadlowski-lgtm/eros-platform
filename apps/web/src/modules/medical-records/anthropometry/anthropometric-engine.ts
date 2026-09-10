@@ -26,6 +26,95 @@ export interface AnthropometricContextInsight {
   description: string;
 }
 
+interface BodyFatObservation {
+  value: number | null;
+  source:
+    | 'HIGEIA_CALCULATION'
+    | 'PROFESSIONAL_INPUT'
+    | null;
+  method: string | null;
+}
+
+function getBodyFatObservation(
+  assessment: AnthropometricAssessment,
+  results:
+    | AnthropometricAssessmentResults
+    | undefined,
+): BodyFatObservation {
+  const calculated =
+    results?.calculations.find(
+      (
+        calculation,
+      ) =>
+        calculation.code ===
+        'BODY_FAT_PERCENTAGE',
+    );
+
+  if (calculated) {
+    return {
+      value:
+        calculated.value,
+      source:
+        'HIGEIA_CALCULATION',
+      method:
+        calculated.method ??
+        null,
+    };
+  }
+
+  if (
+    assessment.bodyFatPercentage !==
+    null
+  ) {
+    return {
+      value:
+        assessment.bodyFatPercentage,
+      source:
+        'PROFESSIONAL_INPUT',
+      method:
+        assessment.bodyCompositionMethod ??
+        null,
+    };
+  }
+
+  return {
+    value:
+      null,
+    source:
+      null,
+    method:
+      null,
+  };
+}
+
+function areBodyFatObservationsComparable(
+  current: BodyFatObservation,
+  previous: BodyFatObservation,
+): boolean {
+  if (
+    current.value === null ||
+    previous.value === null
+  ) {
+    return false;
+  }
+
+  if (
+    current.source !==
+    previous.source
+  ) {
+    return false;
+  }
+
+  if (
+    current.method !==
+    previous.method
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
 function formatTrend(
   difference: number,
   unit: string,
@@ -142,28 +231,33 @@ export function buildAnthropometricContextInsights(
     }
 
     const currentBodyFat =
-      getCalculationValue(
+      getBodyFatObservation(
+        currentAssessment,
         currentResults,
-        'BODY_FAT_PERCENTAGE',
-      ) ??
-      currentAssessment.bodyFatPercentage;
+      );
 
     const previousBodyFat =
-      getCalculationValue(
+      getBodyFatObservation(
+        previousAssessment,
         previousResults,
-        'BODY_FAT_PERCENTAGE',
-      ) ??
-      previousAssessment.bodyFatPercentage;
+      );
+
+    const bodyFatComparable =
+      areBodyFatObservationsComparable(
+        currentBodyFat,
+        previousBodyFat,
+      );
 
     if (
-      currentBodyFat !==
+      bodyFatComparable &&
+      currentBodyFat.value !==
         null &&
-      previousBodyFat !==
+      previousBodyFat.value !==
         null
     ) {
       const difference =
-        currentBodyFat -
-        previousBodyFat;
+        currentBodyFat.value -
+        previousBodyFat.value;
 
       insights.push({
         code:
@@ -176,7 +270,23 @@ export function buildAnthropometricContextInsights(
             'p.p.',
           ),
         description:
-          'Comparação objetiva do percentual de gordura com a avaliação imediatamente anterior.',
+          'Comparação objetiva do percentual de gordura com a avaliação imediatamente anterior usando registros metodologicamente comparáveis.',
+      });
+    } else if (
+      currentBodyFat.value !==
+        null &&
+      previousBodyFat.value !==
+        null
+    ) {
+      insights.push({
+        code:
+          'BODY_FAT_COMPARABILITY_LIMIT',
+        label:
+          'Comparabilidade da gordura corporal',
+        value:
+          'Comparação limitada por mudança de método',
+        description:
+          'A Higeia não calculou tendência entre estes percentuais de gordura porque a origem ou o método registrado mudou entre as avaliações.',
       });
     }
   }
@@ -235,18 +345,22 @@ export function buildAnthropometricContextInsights(
       );
 
     const currentBodyFat =
-      getCalculationValue(
+      getBodyFatObservation(
+        currentAssessment,
         currentResults,
-        'BODY_FAT_PERCENTAGE',
-      ) ??
-      currentAssessment.bodyFatPercentage;
+      );
 
     const previousBodyFat =
-      getCalculationValue(
+      getBodyFatObservation(
+        previousAssessment,
         previousResults,
-        'BODY_FAT_PERCENTAGE',
-      ) ??
-      previousAssessment.bodyFatPercentage;
+      );
+
+    const bodyFatComparable =
+      areBodyFatObservationsComparable(
+        currentBodyFat,
+        previousBodyFat,
+      );
 
     const weightDifference =
       currentAssessment.weightKg !== null &&
@@ -263,10 +377,13 @@ export function buildAnthropometricContextInsights(
         : null;
 
     const bodyFatDifference =
-      currentBodyFat !== null &&
-      previousBodyFat !== null
-        ? currentBodyFat -
-          previousBodyFat
+      bodyFatComparable &&
+      currentBodyFat.value !==
+        null &&
+      previousBodyFat.value !==
+        null
+        ? currentBodyFat.value -
+          previousBodyFat.value
         : null;
 
     const hasSuspiciousWaistVariation =
