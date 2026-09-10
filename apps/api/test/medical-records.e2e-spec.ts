@@ -709,6 +709,86 @@ describe('Medical Records (e2e)', () => {
             valueMm: 18.7,
           },
         ],
+        circumferenceMeasurements: [
+          {
+            site: 'NECK',
+            valueCm: 39.5,
+          },
+          {
+            site: 'SHOULDERS',
+            valueCm: 118,
+          },
+          {
+            site: 'CHEST',
+            valueCm: 101,
+          },
+          {
+            site: 'WAIST',
+            valueCm: 83,
+          },
+          {
+            site: 'ABDOMEN',
+            valueCm: 85,
+          },
+          {
+            site: 'HIP',
+            valueCm: 88.5,
+          },
+          {
+            site: 'ARM',
+            side: 'RIGHT',
+            state: 'RELAXED',
+            valueCm: 35.2,
+          },
+          {
+            site: 'ARM',
+            side: 'LEFT',
+            state: 'RELAXED',
+            valueCm: 34.8,
+          },
+          {
+            site: 'ARM',
+            side: 'RIGHT',
+            state: 'CONTRACTED',
+            valueCm: 37.1,
+          },
+          {
+            site: 'ARM',
+            side: 'LEFT',
+            state: 'CONTRACTED',
+            valueCm: 36.7,
+          },
+          {
+            site: 'FOREARM',
+            side: 'RIGHT',
+            valueCm: 29.4,
+          },
+          {
+            site: 'FOREARM',
+            side: 'LEFT',
+            valueCm: 29.1,
+          },
+          {
+            site: 'THIGH',
+            side: 'RIGHT',
+            valueCm: 58.2,
+          },
+          {
+            site: 'THIGH',
+            side: 'LEFT',
+            valueCm: 57.8,
+          },
+          {
+            site: 'CALF',
+            side: 'RIGHT',
+            valueCm: 38.4,
+          },
+          {
+            site: 'CALF',
+            side: 'LEFT',
+            valueCm: 38.1,
+          },
+        ],
         notes: '  Avaliação antropométrica inicial.  ',
       })
       .expect(201);
@@ -732,6 +812,36 @@ describe('Medical Records (e2e)', () => {
     });
 
     expect(body.skinfoldMeasurements).toHaveLength(7);
+    expect(body.circumferenceMeasurements).toHaveLength(16);
+
+    expect(body.circumferenceMeasurements).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          site: 'ARM',
+          side: 'RIGHT',
+          state: 'RELAXED',
+          valueCm: 35.2,
+        }),
+        expect.objectContaining({
+          site: 'ARM',
+          side: 'LEFT',
+          state: 'CONTRACTED',
+          valueCm: 36.7,
+        }),
+        expect.objectContaining({
+          site: 'THIGH',
+          side: 'RIGHT',
+          state: 'NOT_APPLICABLE',
+          valueCm: 58.2,
+        }),
+        expect.objectContaining({
+          site: 'WAIST',
+          side: 'NOT_APPLICABLE',
+          state: 'NOT_APPLICABLE',
+          valueCm: 83,
+        }),
+      ]),
+    );
 
     anthropometricAssessmentId = body.id;
 
@@ -744,6 +854,7 @@ describe('Medical Records (e2e)', () => {
         },
         include: {
           skinfoldMeasurements: true,
+          circumferenceMeasurements: true,
         },
       });
 
@@ -751,6 +862,9 @@ describe('Medical Records (e2e)', () => {
     expect(
       persisted?.skinfoldMeasurements,
     ).toHaveLength(7);
+    expect(
+      persisted?.circumferenceMeasurements,
+    ).toHaveLength(16);
   });
 
   it('lists anthropometric assessments from the patient', async () => {
@@ -804,6 +918,24 @@ describe('Medical Records (e2e)', () => {
     });
 
     expect(body.skinfoldMeasurements).toHaveLength(7);
+    expect(body.circumferenceMeasurements).toHaveLength(16);
+
+    expect(body.circumferenceMeasurements).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          site: 'ARM',
+          side: 'RIGHT',
+          state: 'CONTRACTED',
+          valueCm: 37.1,
+        }),
+        expect.objectContaining({
+          site: 'CALF',
+          side: 'LEFT',
+          state: 'NOT_APPLICABLE',
+          valueCm: 38.1,
+        }),
+      ]),
+    );
   });
 
   it('returns calculated anthropometric assessment results with clinical context', async () => {
@@ -919,6 +1051,44 @@ describe('Medical Records (e2e)', () => {
             valueMm: 18.9,
           },
         ],
+        circumferenceMeasurements: [
+          {
+            site: 'WAIST',
+            valueCm: 81.5,
+          },
+          {
+            site: 'ARM',
+            side: 'RIGHT',
+            state: 'RELAXED',
+            valueCm: 35.8,
+          },
+          {
+            site: 'ARM',
+            side: 'LEFT',
+            state: 'RELAXED',
+            valueCm: 35.4,
+          },
+          {
+            site: 'THIGH',
+            side: 'RIGHT',
+            valueCm: 58.9,
+          },
+          {
+            site: 'THIGH',
+            side: 'LEFT',
+            valueCm: 58.4,
+          },
+          {
+            site: 'CALF',
+            side: 'RIGHT',
+            valueCm: 38.7,
+          },
+          {
+            site: 'CALF',
+            side: 'LEFT',
+            valueCm: 38.4,
+          },
+        ],
         notes: '  Avaliação revisada.  ',
       })
       .expect(200);
@@ -935,6 +1105,24 @@ describe('Medical Records (e2e)', () => {
     });
 
     expect(body.skinfoldMeasurements).toHaveLength(3);
+    expect(body.circumferenceMeasurements).toHaveLength(7);
+
+    expect(body.circumferenceMeasurements).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          site: 'WAIST',
+          side: 'NOT_APPLICABLE',
+          state: 'NOT_APPLICABLE',
+          valueCm: 81.5,
+        }),
+        expect.objectContaining({
+          site: 'ARM',
+          side: 'RIGHT',
+          state: 'RELAXED',
+          valueCm: 35.8,
+        }),
+      ]),
+    );
 
     const persisted =
       await prisma.anthropometricAssessment.findUnique({
@@ -943,12 +1131,160 @@ describe('Medical Records (e2e)', () => {
         },
         include: {
           skinfoldMeasurements: true,
+          circumferenceMeasurements: true,
         },
       });
 
     expect(
       persisted?.skinfoldMeasurements,
     ).toHaveLength(3);
+    expect(
+      persisted?.circumferenceMeasurements,
+    ).toHaveLength(7);
+
+    expect(
+      persisted?.circumferenceMeasurements.some(
+        (measurement) =>
+          measurement.site === 'SHOULDERS',
+      ),
+    ).toBe(false);
+  });
+
+  it('rejects duplicate anthropometric circumference measurements', async () => {
+    const response = await request(app.getHttpServer())
+      .post(
+        `/api/patients/${patientId}/medical-record/anthropometric-assessments`,
+      )
+      .set(
+        'Authorization',
+        `Bearer ${ownerTenantAccessToken}`,
+      )
+      .send({
+        measuredAt: '2026-08-30',
+        circumferenceMeasurements: [
+          {
+            site: 'ARM',
+            side: 'RIGHT',
+            state: 'RELAXED',
+            valueCm: 35.8,
+          },
+          {
+            site: 'ARM',
+            side: 'RIGHT',
+            state: 'RELAXED',
+            valueCm: 36,
+          },
+        ],
+      })
+      .expect(400);
+
+    expect(response.body).toMatchObject({
+      statusCode: 400,
+    });
+  });
+
+  it('rejects trunk circumference measurements with a side', async () => {
+    const response = await request(app.getHttpServer())
+      .post(
+        `/api/patients/${patientId}/medical-record/anthropometric-assessments`,
+      )
+      .set(
+        'Authorization',
+        `Bearer ${ownerTenantAccessToken}`,
+      )
+      .send({
+        measuredAt: '2026-08-30',
+        circumferenceMeasurements: [
+          {
+            site: 'WAIST',
+            side: 'RIGHT',
+            valueCm: 82,
+          },
+        ],
+      })
+      .expect(400);
+
+    expect(response.body).toMatchObject({
+      statusCode: 400,
+    });
+  });
+
+  it('rejects bilateral circumference measurements without a side', async () => {
+    const response = await request(app.getHttpServer())
+      .post(
+        `/api/patients/${patientId}/medical-record/anthropometric-assessments`,
+      )
+      .set(
+        'Authorization',
+        `Bearer ${ownerTenantAccessToken}`,
+      )
+      .send({
+        measuredAt: '2026-08-30',
+        circumferenceMeasurements: [
+          {
+            site: 'THIGH',
+            valueCm: 58,
+          },
+        ],
+      })
+      .expect(400);
+
+    expect(response.body).toMatchObject({
+      statusCode: 400,
+    });
+  });
+
+  it('rejects arm circumference measurements without contraction state', async () => {
+    const response = await request(app.getHttpServer())
+      .post(
+        `/api/patients/${patientId}/medical-record/anthropometric-assessments`,
+      )
+      .set(
+        'Authorization',
+        `Bearer ${ownerTenantAccessToken}`,
+      )
+      .send({
+        measuredAt: '2026-08-30',
+        circumferenceMeasurements: [
+          {
+            site: 'ARM',
+            side: 'LEFT',
+            valueCm: 35,
+          },
+        ],
+      })
+      .expect(400);
+
+    expect(response.body).toMatchObject({
+      statusCode: 400,
+    });
+  });
+
+  it('rejects contraction state for thigh circumference measurements', async () => {
+    const response = await request(app.getHttpServer())
+      .post(
+        `/api/patients/${patientId}/medical-record/anthropometric-assessments`,
+      )
+      .set(
+        'Authorization',
+        `Bearer ${ownerTenantAccessToken}`,
+      )
+      .send({
+        measuredAt: '2026-08-30',
+        circumferenceMeasurements: [
+          {
+            site: 'THIGH',
+            side: 'RIGHT',
+            state: 'CONTRACTED',
+            valueCm: 58,
+          },
+        ],
+      })
+      .expect(400);
+
+    expect(response.body).toMatchObject({
+      statusCode: 400,
+    });
   });
 
   it('rejects an anthropometric skinfold reading above the API limit', async () => {

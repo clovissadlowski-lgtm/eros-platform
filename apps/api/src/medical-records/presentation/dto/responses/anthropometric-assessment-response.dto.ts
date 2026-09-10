@@ -4,6 +4,9 @@ import {
 } from '@nestjs/swagger';
 
 import {
+  AnthropometricCircumferenceSite,
+  AnthropometricCircumferenceState,
+  AnthropometricMeasurementSide,
   BodyCompositionMethod,
   SkinfoldMeasurementSide,
   SkinfoldProtocol,
@@ -59,6 +62,73 @@ export class AnthropometricSkinfoldMeasurementResponseDto {
       'Espessura da dobra cutânea em milímetros.',
   })
   valueMm!:
+    number;
+
+  @ApiProperty({
+    format:
+      'date-time',
+  })
+  createdAt!: string;
+
+  @ApiProperty({
+    format:
+      'date-time',
+  })
+  updatedAt!: string;
+}
+
+export class AnthropometricCircumferenceMeasurementResponseDto {
+  @ApiProperty({
+    format:
+      'uuid',
+  })
+  id!: string;
+
+  @ApiProperty({
+    format:
+      'uuid',
+  })
+  anthropometricAssessmentId!:
+    string;
+
+  @ApiProperty({
+    enum:
+      AnthropometricCircumferenceSite,
+
+    example:
+      AnthropometricCircumferenceSite.ARM,
+  })
+  site!:
+    AnthropometricCircumferenceSite;
+
+  @ApiProperty({
+    enum:
+      AnthropometricMeasurementSide,
+
+    example:
+      AnthropometricMeasurementSide.RIGHT,
+  })
+  side!:
+    AnthropometricMeasurementSide;
+
+  @ApiProperty({
+    enum:
+      AnthropometricCircumferenceState,
+
+    example:
+      AnthropometricCircumferenceState.RELAXED,
+  })
+  state!:
+    AnthropometricCircumferenceState;
+
+  @ApiProperty({
+    example:
+      35.4,
+
+    description:
+      'Circunferência antropométrica em centímetros.',
+  })
+  valueCm!:
     number;
 
   @ApiProperty({
@@ -273,6 +343,16 @@ export class AnthropometricAssessmentResponseDto {
   })
   skinfoldMeasurements!:
     AnthropometricSkinfoldMeasurementResponseDto[];
+
+  @ApiProperty({
+    type:
+      AnthropometricCircumferenceMeasurementResponseDto,
+
+    isArray:
+      true,
+  })
+  circumferenceMeasurements!:
+    AnthropometricCircumferenceMeasurementResponseDto[];
 
   @ApiPropertyOptional({
     nullable:

@@ -21,6 +21,10 @@ import {
 } from '../../domain/entities/anthropometric-assessment.entity';
 
 import {
+  AnthropometricCircumferenceMeasurementDto,
+} from './anthropometric-circumference-measurement.dto';
+
+import {
   AnthropometricSkinfoldMeasurementDto,
 } from './anthropometric-skinfold-measurement.dto';
 
@@ -198,6 +202,19 @@ export class CreateAnthropometricAssessmentDto {
   )
   skinfoldMeasurements?:
     AnthropometricSkinfoldMeasurementDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({
+    each:
+      true,
+  })
+  @Type(
+    () =>
+      AnthropometricCircumferenceMeasurementDto,
+  )
+  circumferenceMeasurements?:
+    AnthropometricCircumferenceMeasurementDto[];
 
   @IsOptional()
   @IsString()

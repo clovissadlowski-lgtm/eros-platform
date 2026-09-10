@@ -8,6 +8,10 @@ import {
 
 import {
   AnthropometricAssessment,
+  AnthropometricCircumferenceMeasurement,
+  AnthropometricCircumferenceSite,
+  AnthropometricCircumferenceState,
+  AnthropometricMeasurementSide,
   AnthropometricSkinfoldMeasurement,
   BodyCompositionMethod,
   SkinfoldMeasurementSide,
@@ -21,13 +25,17 @@ import {
 
 import type {
   AnthropometricAssessment as PrismaAnthropometricAssessment,
+  AnthropometricCircumferenceMeasurement as PrismaAnthropometricCircumferenceMeasurement,
   AnthropometricSkinfoldMeasurement as PrismaAnthropometricSkinfoldMeasurement,
 } from '../../../generated/prisma/client';
 
-type PrismaAssessmentWithSkinfolds =
+type PrismaAssessmentWithMeasurements =
   PrismaAnthropometricAssessment & {
     skinfoldMeasurements:
       PrismaAnthropometricSkinfoldMeasurement[];
+
+    circumferenceMeasurements:
+      PrismaAnthropometricCircumferenceMeasurement[];
   };
 
 @Injectable()
@@ -110,6 +118,7 @@ export class PrismaAnthropometricAssessmentsRepository
             skinfoldProtocol:
               assessment.skinfoldProtocol,
 
+
             notes:
               assessment.notes,
 
@@ -156,10 +165,47 @@ export class PrismaAnthropometricAssessmentsRepository
                   }),
                 ),
             },
+
+            circumferenceMeasurements: {
+              create:
+                assessment.circumferenceMeasurements.map(
+                  (
+                    measurement,
+                  ) => ({
+                    id:
+                      measurement.id,
+
+                    site:
+                      measurement.site,
+
+                    side:
+                      measurement.side,
+
+                    state:
+                      measurement.state,
+
+                    valueCm:
+                      measurement.valueCm,
+
+                    createdAt:
+                      new Date(
+                        measurement.createdAt,
+                      ),
+
+                    updatedAt:
+                      new Date(
+                        measurement.updatedAt,
+                      ),
+                  }),
+                ),
+            },
           },
 
           include: {
             skinfoldMeasurements:
+              true,
+
+            circumferenceMeasurements:
               true,
           },
         });
@@ -187,6 +233,9 @@ export class PrismaAnthropometricAssessmentsRepository
           include: {
             skinfoldMeasurements:
               true,
+
+            circumferenceMeasurements:
+              true,
           },
         });
 
@@ -212,6 +261,9 @@ export class PrismaAnthropometricAssessmentsRepository
 
           include: {
             skinfoldMeasurements:
+              true,
+
+            circumferenceMeasurements:
               true,
           },
 
@@ -249,6 +301,15 @@ export class PrismaAnthropometricAssessmentsRepository
           ) => {
             await transaction
               .anthropometricSkinfoldMeasurement
+              .deleteMany({
+                where: {
+                  anthropometricAssessmentId:
+                    assessment.id,
+                },
+              });
+
+            await transaction
+              .anthropometricCircumferenceMeasurement
               .deleteMany({
                 where: {
                   anthropometricAssessmentId:
@@ -356,10 +417,47 @@ export class PrismaAnthropometricAssessmentsRepository
                         }),
                       ),
                   },
+
+                  circumferenceMeasurements: {
+                    create:
+                      assessment.circumferenceMeasurements.map(
+                        (
+                          measurement,
+                        ) => ({
+                          id:
+                            measurement.id,
+
+                          site:
+                            measurement.site,
+
+                          side:
+                            measurement.side,
+
+                          state:
+                            measurement.state,
+
+                          valueCm:
+                            measurement.valueCm,
+
+                          createdAt:
+                            new Date(
+                              measurement.createdAt,
+                            ),
+
+                          updatedAt:
+                            new Date(
+                              measurement.updatedAt,
+                            ),
+                        }),
+                      ),
+                  },
                 },
 
                 include: {
                   skinfoldMeasurements:
+                    true,
+
+                  circumferenceMeasurements:
                     true,
                 },
               });
@@ -389,7 +487,7 @@ export class PrismaAnthropometricAssessmentsRepository
 
   private toDomain(
     assessment:
-      PrismaAssessmentWithSkinfolds,
+      PrismaAssessmentWithMeasurements,
   ): AnthropometricAssessment {
     return {
       id:
@@ -536,6 +634,16 @@ export class PrismaAnthropometricAssessmentsRepository
             ),
         ),
 
+      circumferenceMeasurements:
+        assessment.circumferenceMeasurements.map(
+          (
+            measurement,
+          ) =>
+            this.toCircumferenceDomain(
+              measurement,
+            ),
+        ),
+
       notes:
         assessment.notes,
 
@@ -545,6 +653,41 @@ export class PrismaAnthropometricAssessmentsRepository
 
       updatedAt:
         assessment.updatedAt
+          .toISOString(),
+    };
+  }
+
+  private toCircumferenceDomain(
+    measurement:
+      PrismaAnthropometricCircumferenceMeasurement,
+  ): AnthropometricCircumferenceMeasurement {
+    return {
+      id:
+        measurement.id,
+
+      anthropometricAssessmentId:
+        measurement.anthropometricAssessmentId,
+
+      site:
+        measurement.site as AnthropometricCircumferenceSite,
+
+      side:
+        measurement.side as AnthropometricMeasurementSide,
+
+      state:
+        measurement.state as AnthropometricCircumferenceState,
+
+      valueCm:
+        Number(
+          measurement.valueCm,
+        ),
+
+      createdAt:
+        measurement.createdAt
+          .toISOString(),
+
+      updatedAt:
+        measurement.updatedAt
           .toISOString(),
     };
   }

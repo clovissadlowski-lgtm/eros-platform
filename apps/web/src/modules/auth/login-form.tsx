@@ -51,7 +51,8 @@ import {
 } from './login.schema';
 
 export function LoginForm() {
-  const router = useRouter();
+  const router =
+    useRouter();
 
   const [
     passwordVisible,
@@ -77,7 +78,8 @@ export function LoginForm() {
 
   const loginMutation =
     useMutation({
-      mutationFn: login,
+      mutationFn:
+        login,
 
       onSuccess: (
         response,
@@ -85,6 +87,10 @@ export function LoginForm() {
         authStorage.saveTokens(
           response.accessToken,
           response.refreshToken,
+        );
+
+        authStorage.saveUser(
+          response.user,
         );
 
         toast.success(
@@ -100,7 +106,8 @@ export function LoginForm() {
         error,
       ) => {
         if (
-          error instanceof ApiError
+          error instanceof
+          ApiError
         ) {
           if (
             error.code ===
@@ -218,7 +225,9 @@ export function LoginForm() {
             type="button"
             onClick={() =>
               setPasswordVisible(
-                (current) =>
+                (
+                  current,
+                ) =>
                   !current,
               )
             }

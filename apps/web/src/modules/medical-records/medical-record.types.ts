@@ -638,6 +638,43 @@ export type SkinfoldProtocol =
   | 'JACKSON_POLLOCK_7'
   | 'OTHER';
 
+export type AnthropometricCircumferenceSite =
+  | 'NECK'
+  | 'SHOULDERS'
+  | 'CHEST'
+  | 'WAIST'
+  | 'ABDOMEN'
+  | 'HIP'
+  | 'ARM'
+  | 'FOREARM'
+  | 'THIGH'
+  | 'CALF'
+  | 'OTHER';
+
+export type AnthropometricMeasurementSide =
+  | 'RIGHT'
+  | 'LEFT'
+  | 'NOT_APPLICABLE';
+
+export type AnthropometricCircumferenceState =
+  | 'RELAXED'
+  | 'CONTRACTED'
+  | 'NOT_APPLICABLE';
+
+export interface AnthropometricCircumferenceMeasurement {
+  id: string;
+  anthropometricAssessmentId: string;
+
+  site: AnthropometricCircumferenceSite;
+  side: AnthropometricMeasurementSide;
+  state: AnthropometricCircumferenceState;
+
+  valueCm: number;
+
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface AnthropometricSkinfoldMeasurement {
   id: string;
   anthropometricAssessmentId: string;
@@ -681,6 +718,7 @@ export interface AnthropometricAssessment {
   skinfoldProtocol: SkinfoldProtocol | null;
 
   skinfoldMeasurements: AnthropometricSkinfoldMeasurement[];
+  circumferenceMeasurements: AnthropometricCircumferenceMeasurement[];
 
   notes: string | null;
 
@@ -688,11 +726,87 @@ export interface AnthropometricAssessment {
   updatedAt: string;
 }
 
+export type AnthropometricCalculationSource =
+  | 'HIGEIA_CALCULATION'
+  | 'PROFESSIONAL_INPUT'
+  | 'DEVICE';
+
+export type AnthropometricCalculationCode =
+  | 'BMI'
+  | 'BODY_DENSITY'
+  | 'BODY_FAT_PERCENTAGE'
+  | 'FAT_MASS_KG'
+  | 'LEAN_MASS_KG';
+
+export interface AnthropometricCalculation {
+  code: AnthropometricCalculationCode;
+  value: number;
+  unit: 'kg/m²' | 'g/mL' | '%' | 'kg';
+  source: AnthropometricCalculationSource;
+  method: string;
+}
+
+export type AnthropometricPopulation =
+  | 'ADULT'
+  | 'OLDER_ADULT'
+  | 'CHILD'
+  | 'ADOLESCENT'
+  | 'PREGNANCY'
+  | 'UNKNOWN';
+
+export interface AnthropometricClinicalAge {
+  years: number;
+  months: number;
+  totalMonths: number;
+}
+
+export interface AnthropometricClinicalContext {
+  assessmentDate: string;
+  biologicalSex: 'MALE' | 'FEMALE' | null;
+  age: AnthropometricClinicalAge | null;
+  population: AnthropometricPopulation;
+  hasBirthDate: boolean;
+  hasBiologicalSex: boolean;
+}
+
+export type JacksonPollockEligibilityReason =
+  | 'ELIGIBLE'
+  | 'MISSING_AGE'
+  | 'MISSING_BIOLOGICAL_SEX'
+  | 'BELOW_REFERENCE_AGE'
+  | 'ABOVE_REFERENCE_AGE';
+
+export interface JacksonPollockReferenceAgeRange {
+  minimumYears: number;
+  maximumYears: number;
+}
+
+export interface JacksonPollockEligibility {
+  eligible: boolean;
+  reason: JacksonPollockEligibilityReason;
+  referenceAgeRange:
+    JacksonPollockReferenceAgeRange | null;
+}
+
+export interface AnthropometricAssessmentResults {
+  assessment: AnthropometricAssessment;
+  clinicalContext: AnthropometricClinicalContext;
+  calculations: AnthropometricCalculation[];
+  jacksonPollockEligibility:
+    JacksonPollockEligibility | null;
+}
 export interface AnthropometricSkinfoldMeasurementInput {
   site: SkinfoldSite;
   side?: SkinfoldMeasurementSide;
   readingNumber: number;
   valueMm: number;
+}
+
+export interface AnthropometricCircumferenceMeasurementInput {
+  site: AnthropometricCircumferenceSite;
+  side?: AnthropometricMeasurementSide;
+  state?: AnthropometricCircumferenceState;
+  valueCm: number;
 }
 
 export interface CreateAnthropometricAssessmentInput {
@@ -718,6 +832,7 @@ export interface CreateAnthropometricAssessmentInput {
   skinfoldProtocol?: SkinfoldProtocol;
 
   skinfoldMeasurements?: AnthropometricSkinfoldMeasurementInput[];
+  circumferenceMeasurements?: AnthropometricCircumferenceMeasurementInput[];
 
   notes?: string;
 }
@@ -745,6 +860,7 @@ export interface UpdateAnthropometricAssessmentInput {
   skinfoldProtocol?: SkinfoldProtocol | null;
 
   skinfoldMeasurements?: AnthropometricSkinfoldMeasurementInput[];
+  circumferenceMeasurements?: AnthropometricCircumferenceMeasurementInput[];
 
   notes?: string | null;
 }

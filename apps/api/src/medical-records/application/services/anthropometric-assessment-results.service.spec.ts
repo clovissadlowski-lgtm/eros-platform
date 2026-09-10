@@ -147,6 +147,57 @@ describe(
         ...overrides,
       });
 
+    const createJacksonPollock3Measurements =
+      (
+        biologicalSex:
+          PatientBiologicalSex,
+      ): AnthropometricAssessment[
+        'skinfoldMeasurements'
+      ] => {
+        const sites =
+          biologicalSex ===
+          PatientBiologicalSex.MALE
+            ? [
+                SkinfoldSite.CHEST,
+                SkinfoldSite.ABDOMEN,
+                SkinfoldSite.THIGH,
+              ]
+            : [
+                SkinfoldSite.TRICEPS,
+                SkinfoldSite.SUPRAILIAC,
+                SkinfoldSite.THIGH,
+              ];
+
+        return sites.map(
+          (
+            site,
+            index,
+          ) => ({
+            id:
+              `eligibility-${index + 1}`,
+
+            anthropometricAssessmentId:
+              '44444444-4444-4444-8444-444444444444',
+
+            site,
+
+            side:
+              SkinfoldMeasurementSide.RIGHT,
+
+            readingNumber:
+              1,
+
+            valueMm:
+              15 + index * 5,
+
+            createdAt:
+              '2026-08-29T12:00:00.000Z',
+
+            updatedAt:
+              '2026-08-29T12:00:00.000Z',
+          }),
+        );
+      };
     it(
       'builds clinical context and BMI from an assessment',
       () => {
@@ -206,6 +257,10 @@ describe(
               'WEIGHT_HEIGHT_BMI',
           },
         ]);
+
+        expect(
+          result.jacksonPollockEligibility,
+        ).toBeNull();
       },
     );
 
@@ -514,6 +569,24 @@ describe(
         ).toBe(
           'BMI',
         );
+
+        expect(
+          result.jacksonPollockEligibility,
+        ).toEqual({
+          eligible:
+            true,
+
+          reason:
+            'ELIGIBLE',
+
+          referenceAgeRange: {
+            minimumYears:
+              18,
+
+            maximumYears:
+              61,
+          },
+        });
       },
     );
 
@@ -542,6 +615,24 @@ describe(
         ).toHaveLength(
           1,
         );
+
+        expect(
+          result.jacksonPollockEligibility,
+        ).toEqual({
+          eligible:
+            false,
+
+          reason:
+            'MISSING_AGE',
+
+          referenceAgeRange: {
+            minimumYears:
+              18,
+
+            maximumYears:
+              61,
+          },
+        });
       },
     );
 
@@ -614,9 +705,202 @@ describe(
         ).toBe(
           'BMI',
         );
+
+        expect(
+          result.jacksonPollockEligibility,
+        ).toBeNull();
       },
     );
 
+    it(
+      'does not calculate Jackson-Pollock for a patient below 18 years',
+      () => {
+        const result =
+          service.build(
+            createAssessment({
+              skinfoldProtocol:
+                SkinfoldProtocol.JACKSON_POLLOCK_3,
+
+              skinfoldMeasurements:
+                createJacksonPollock3Measurements(
+                  PatientBiologicalSex.MALE,
+                ),
+            }),
+
+            createPatient({
+              birthDate:
+                '2009-08-29',
+
+              biologicalSex:
+                PatientBiologicalSex.MALE,
+            }),
+          );
+
+        expect(
+          result.clinicalContext.age?.years,
+        ).toBe(
+          17,
+        );
+
+        expect(
+          result.calculations,
+        ).toHaveLength(
+          1,
+        );
+
+        expect(
+          result.calculations[0].code,
+        ).toBe(
+          'BMI',
+        );
+
+        expect(
+          result.jacksonPollockEligibility,
+        ).toEqual({
+          eligible:
+            false,
+
+          reason:
+            'BELOW_REFERENCE_AGE',
+
+          referenceAgeRange: {
+            minimumYears:
+              18,
+
+            maximumYears:
+              61,
+          },
+        });
+      },
+    );
+
+    it(
+      'does not calculate Jackson-Pollock for a male above 61 years',
+      () => {
+        const result =
+          service.build(
+            createAssessment({
+              skinfoldProtocol:
+                SkinfoldProtocol.JACKSON_POLLOCK_3,
+
+              skinfoldMeasurements:
+                createJacksonPollock3Measurements(
+                  PatientBiologicalSex.MALE,
+                ),
+            }),
+
+            createPatient({
+              birthDate:
+                '1964-08-28',
+
+              biologicalSex:
+                PatientBiologicalSex.MALE,
+            }),
+          );
+
+        expect(
+          result.clinicalContext.age?.years,
+        ).toBe(
+          62,
+        );
+
+        expect(
+          result.calculations,
+        ).toHaveLength(
+          1,
+        );
+
+        expect(
+          result.calculations[0].code,
+        ).toBe(
+          'BMI',
+        );
+
+        expect(
+          result.jacksonPollockEligibility,
+        ).toEqual({
+          eligible:
+            false,
+
+          reason:
+            'ABOVE_REFERENCE_AGE',
+
+          referenceAgeRange: {
+            minimumYears:
+              18,
+
+            maximumYears:
+              61,
+          },
+        });
+
+
+      },
+    );
+
+    it(
+      'does not calculate Jackson-Pollock for a female above 55 years',
+      () => {
+        const result =
+          service.build(
+            createAssessment({
+              skinfoldProtocol:
+                SkinfoldProtocol.JACKSON_POLLOCK_3,
+
+              skinfoldMeasurements:
+                createJacksonPollock3Measurements(
+                  PatientBiologicalSex.FEMALE,
+                ),
+            }),
+
+            createPatient({
+              birthDate:
+                '1970-08-28',
+
+              biologicalSex:
+                PatientBiologicalSex.FEMALE,
+            }),
+          );
+
+        expect(
+          result.clinicalContext.age?.years,
+        ).toBe(
+          56,
+        );
+
+        expect(
+          result.calculations,
+        ).toHaveLength(
+          1,
+        );
+
+        expect(
+          result.calculations[0].code,
+        ).toBe(
+          'BMI',
+        );
+
+        expect(
+          result.jacksonPollockEligibility,
+        ).toEqual({
+          eligible:
+            false,
+
+          reason:
+            'ABOVE_REFERENCE_AGE',
+
+          referenceAgeRange: {
+            minimumYears:
+              18,
+
+            maximumYears:
+              55,
+          },
+        });
+
+
+      },
+    );
     it(
       'uses the assessment date for historical clinical context',
       () => {

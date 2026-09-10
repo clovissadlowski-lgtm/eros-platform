@@ -6,7 +6,6 @@ import {
 } from 'react';
 
 import {
-  Pencil,
   Plus,
   Ruler,
   Trash2,
@@ -22,6 +21,10 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+
+import {
+  AnthropometricAssessmentComparisonPanel,
+} from './anthropometric-assessment-comparison-panel';
 
 import {
   useAnthropometricAssessments,
@@ -41,6 +44,10 @@ import {
 
 import type {
   AnthropometricAssessment,
+  AnthropometricCircumferenceMeasurementInput,
+  AnthropometricCircumferenceSite,
+  AnthropometricCircumferenceState,
+  AnthropometricMeasurementSide,
   AnthropometricSkinfoldMeasurementInput,
   BodyCompositionMethod,
   CreateAnthropometricAssessmentInput,
@@ -52,6 +59,10 @@ import type {
 
 interface AnthropometricAssessmentsCardProps {
   patientId: string;
+  patientName: string;
+  patientBirthDate: string | null;
+  patientCpf: string | null;
+  biologicalSex: 'MALE' | 'FEMALE' | null;
 }
 
 interface SkinfoldFormState {
@@ -59,6 +70,13 @@ interface SkinfoldFormState {
   side: SkinfoldMeasurementSide;
   readingNumber: number;
   valueMm: string;
+}
+
+interface CircumferenceFormState {
+  site: AnthropometricCircumferenceSite;
+  side: AnthropometricMeasurementSide;
+  state: AnthropometricCircumferenceState;
+  valueCm: string;
 }
 
 interface AnthropometricAssessmentFormState {
@@ -88,6 +106,9 @@ interface AnthropometricAssessmentFormState {
 
   skinfoldMeasurements:
     SkinfoldFormState[];
+
+  circumferenceMeasurements:
+    CircumferenceFormState[];
 
   notes: string;
 }
@@ -122,6 +143,71 @@ const skinfoldSiteLabels:
     OTHER: 'Outro',
   };
 
+function getJacksonPollockRequiredSites(
+  protocol: SkinfoldProtocol | '',
+  biologicalSex: 'MALE' | 'FEMALE' | null,
+): SkinfoldSite[] {
+  if (
+    protocol === 'JACKSON_POLLOCK_3'
+  ) {
+    if (
+      biologicalSex === 'MALE'
+    ) {
+      return [
+        'CHEST',
+        'ABDOMEN',
+        'THIGH',
+      ];
+    }
+
+    if (
+      biologicalSex === 'FEMALE'
+    ) {
+      return [
+        'TRICEPS',
+        'SUPRAILIAC',
+        'THIGH',
+      ];
+    }
+
+    return [];
+  }
+
+  if (
+    protocol === 'JACKSON_POLLOCK_7'
+  ) {
+    return [
+      'CHEST',
+      'MIDAXILLARY',
+      'TRICEPS',
+      'SUBSCAPULAR',
+      'ABDOMEN',
+      'SUPRAILIAC',
+      'THIGH',
+    ];
+  }
+
+  return [];
+}
+
+function createGuidedSkinfoldMeasurements(
+  protocol: SkinfoldProtocol | '',
+  biologicalSex: 'MALE' | 'FEMALE' | null,
+): SkinfoldFormState[] {
+  return getJacksonPollockRequiredSites(
+    protocol,
+    biologicalSex,
+  ).map(
+    (
+      site,
+    ) => ({
+      site,
+      side: 'RIGHT',
+      readingNumber: 1,
+      valueMm: '',
+    }),
+  );
+}
 const skinfoldSideLabels:
   Record<SkinfoldMeasurementSide, string> = {
     RIGHT: 'Direito',
@@ -154,6 +240,161 @@ function todayInputValue(): string {
   return `${year}-${month}-${day}`;
 }
 
+function createInitialCircumferenceFormState():
+  CircumferenceFormState[] {
+  return [
+    {
+      site: 'NECK',
+      side: 'NOT_APPLICABLE',
+      state: 'NOT_APPLICABLE',
+      valueCm: '',
+    },
+    {
+      site: 'SHOULDERS',
+      side: 'NOT_APPLICABLE',
+      state: 'NOT_APPLICABLE',
+      valueCm: '',
+    },
+    {
+      site: 'CHEST',
+      side: 'NOT_APPLICABLE',
+      state: 'NOT_APPLICABLE',
+      valueCm: '',
+    },
+    {
+      site: 'WAIST',
+      side: 'NOT_APPLICABLE',
+      state: 'NOT_APPLICABLE',
+      valueCm: '',
+    },
+    {
+      site: 'ABDOMEN',
+      side: 'NOT_APPLICABLE',
+      state: 'NOT_APPLICABLE',
+      valueCm: '',
+    },
+    {
+      site: 'HIP',
+      side: 'NOT_APPLICABLE',
+      state: 'NOT_APPLICABLE',
+      valueCm: '',
+    },
+    {
+      site: 'ARM',
+      side: 'RIGHT',
+      state: 'RELAXED',
+      valueCm: '',
+    },
+    {
+      site: 'ARM',
+      side: 'LEFT',
+      state: 'RELAXED',
+      valueCm: '',
+    },
+    {
+      site: 'ARM',
+      side: 'RIGHT',
+      state: 'CONTRACTED',
+      valueCm: '',
+    },
+    {
+      site: 'ARM',
+      side: 'LEFT',
+      state: 'CONTRACTED',
+      valueCm: '',
+    },
+    {
+      site: 'FOREARM',
+      side: 'RIGHT',
+      state: 'NOT_APPLICABLE',
+      valueCm: '',
+    },
+    {
+      site: 'FOREARM',
+      side: 'LEFT',
+      state: 'NOT_APPLICABLE',
+      valueCm: '',
+    },
+    {
+      site: 'THIGH',
+      side: 'RIGHT',
+      state: 'NOT_APPLICABLE',
+      valueCm: '',
+    },
+    {
+      site: 'THIGH',
+      side: 'LEFT',
+      state: 'NOT_APPLICABLE',
+      valueCm: '',
+    },
+    {
+      site: 'CALF',
+      side: 'RIGHT',
+      state: 'NOT_APPLICABLE',
+      valueCm: '',
+    },
+    {
+      site: 'CALF',
+      side: 'LEFT',
+      state: 'NOT_APPLICABLE',
+      valueCm: '',
+    },
+  ];
+}
+
+function circumferenceMeasurementKey(
+  site: AnthropometricCircumferenceSite,
+  side: AnthropometricMeasurementSide,
+  state: AnthropometricCircumferenceState,
+): string {
+  return `${site}:${side}:${state}`;
+}
+
+function assessmentCircumferencesToFormState(
+  assessment: AnthropometricAssessment,
+): CircumferenceFormState[] {
+  const existingByKey =
+    new Map(
+      assessment.circumferenceMeasurements.map(
+        (
+          measurement,
+        ) => [
+          circumferenceMeasurementKey(
+            measurement.site,
+            measurement.side,
+            measurement.state,
+          ),
+          measurement,
+        ],
+      ),
+    );
+
+  return createInitialCircumferenceFormState().map(
+    (
+      measurement,
+    ) => {
+      const existing =
+        existingByKey.get(
+          circumferenceMeasurementKey(
+            measurement.site,
+            measurement.side,
+            measurement.state,
+          ),
+        );
+
+      return {
+        ...measurement,
+        valueCm:
+          existing
+            ? String(
+                existing.valueCm,
+              )
+            : '',
+      };
+    },
+  );
+}
+
 function createInitialFormState():
   AnthropometricAssessmentFormState {
   return {
@@ -180,6 +421,9 @@ function createInitialFormState():
     skinfoldProtocol: '',
 
     skinfoldMeasurements: [],
+
+    circumferenceMeasurements:
+      createInitialCircumferenceFormState(),
 
     notes: '',
   };
@@ -360,25 +604,24 @@ function assessmentToFormState(
         }),
       ),
 
+    circumferenceMeasurements:
+      assessmentCircumferencesToFormState(
+        assessment,
+      ),
+
     notes:
       assessment.notes ??
       '',
   };
 }
 
-function formatMeasurement(
-  value: number | null,
-  unit: string,
-): string | null {
-  if (value === null) {
-    return null;
-  }
-
-  return `${value} ${unit}`;
-}
 
 export function AnthropometricAssessmentsCard({
   patientId,
+  patientName,
+  patientBirthDate,
+  patientCpf,
+  biologicalSex,
 }: AnthropometricAssessmentsCardProps) {
   const assessmentsQuery =
     useAnthropometricAssessments(
@@ -510,6 +753,125 @@ export function AnthropometricAssessmentsCard({
     );
   }
 
+  function handleSkinfoldProtocolChange(
+    protocol: SkinfoldProtocol | '',
+  ): void {
+    setForm(
+      (
+        current,
+      ) => {
+        if (
+          protocol ===
+          'JACKSON_POLLOCK_3' ||
+          protocol ===
+          'JACKSON_POLLOCK_7'
+        ) {
+          return {
+            ...current,
+            bodyCompositionMethod:
+              'SKINFOLD',
+            skinfoldProtocol:
+              protocol,
+            skinfoldMeasurements:
+              createGuidedSkinfoldMeasurements(
+                protocol,
+                biologicalSex,
+              ),
+          };
+        }
+
+        return {
+          ...current,
+          skinfoldProtocol:
+            protocol,
+          skinfoldMeasurements:
+            protocol === 'OTHER'
+              ? current.skinfoldMeasurements
+              : [],
+        };
+      },
+    );
+  }
+  function addGuidedSkinfoldReading(
+    site: SkinfoldSite,
+  ): void {
+    setForm(
+      (
+        current,
+      ) => {
+        const siteMeasurements =
+          current.skinfoldMeasurements.filter(
+            (
+              measurement,
+            ) =>
+              measurement.site === site &&
+              measurement.side === 'RIGHT',
+          );
+
+        if (
+          siteMeasurements.length >= 3
+        ) {
+          return current;
+        }
+
+        const nextReadingNumber =
+          Math.max(
+            0,
+            ...siteMeasurements.map(
+              (
+                measurement,
+              ) =>
+                measurement.readingNumber,
+            ),
+          ) + 1;
+
+        return {
+          ...current,
+          skinfoldMeasurements: [
+            ...current.skinfoldMeasurements,
+            {
+              site,
+              side: 'RIGHT',
+              readingNumber:
+                nextReadingNumber,
+              valueMm: '',
+            },
+          ],
+        };
+      },
+    );
+  }
+
+  function removeGuidedSkinfoldReading(
+    site: SkinfoldSite,
+    readingNumber: number,
+  ): void {
+    if (
+      readingNumber === 1
+    ) {
+      return;
+    }
+
+    setForm(
+      (
+        current,
+      ) => ({
+        ...current,
+        skinfoldMeasurements:
+          current.skinfoldMeasurements.filter(
+            (
+              measurement,
+            ) =>
+              !(
+                measurement.site === site &&
+                measurement.side === 'RIGHT' &&
+                measurement.readingNumber ===
+                  readingNumber
+              ),
+          ),
+      }),
+    );
+  }
   function addSkinfold(): void {
     setForm(
       (
@@ -624,10 +986,50 @@ export function AnthropometricAssessmentsCard({
     return measurements;
   }
 
+  function buildCircumferencePayload():
+    AnthropometricCircumferenceMeasurementInput[] {
+    const measurements:
+      AnthropometricCircumferenceMeasurementInput[] = [];
+
+    for (
+      const measurement of
+        form.circumferenceMeasurements
+    ) {
+      const valueCm =
+        parseOptionalNumber(
+          measurement.valueCm,
+        );
+
+      if (
+        valueCm === undefined
+      ) {
+        continue;
+      }
+
+      measurements.push({
+        site:
+          measurement.site,
+
+        side:
+          measurement.side,
+
+        state:
+          measurement.state,
+
+        valueCm,
+      });
+    }
+
+    return measurements;
+  }
+
   function createPayload():
     CreateAnthropometricAssessmentInput {
     const skinfoldMeasurements =
       buildSkinfoldPayload();
+
+    const circumferenceMeasurements =
+      buildCircumferencePayload();
 
     return {
       measuredAt:
@@ -712,6 +1114,12 @@ export function AnthropometricAssessmentsCard({
         skinfoldMeasurements.length >
         0
           ? skinfoldMeasurements
+          : undefined,
+
+      circumferenceMeasurements:
+        circumferenceMeasurements.length >
+        0
+          ? circumferenceMeasurements
           : undefined,
 
       notes:
@@ -803,6 +1211,9 @@ export function AnthropometricAssessmentsCard({
 
       skinfoldMeasurements:
         buildSkinfoldPayload(),
+
+      circumferenceMeasurements:
+        buildCircumferencePayload(),
 
       notes:
         form.notes.trim() ||
@@ -931,6 +1342,104 @@ export function AnthropometricAssessmentsCard({
     );
   }
 
+  function updateCircumferenceValue(
+    site: AnthropometricCircumferenceSite,
+    side: AnthropometricMeasurementSide,
+    state: AnthropometricCircumferenceState,
+    valueCm: string,
+  ): void {
+    setForm(
+      (
+        current,
+      ) => ({
+        ...current,
+
+        circumferenceMeasurements:
+          current.circumferenceMeasurements.map(
+            (
+              measurement,
+            ) =>
+              measurement.site ===
+                site &&
+              measurement.side ===
+                side &&
+              measurement.state ===
+                state
+                ? {
+                    ...measurement,
+                    valueCm,
+                  }
+                : measurement,
+          ),
+      }),
+    );
+  }
+
+  function getCircumferenceValue(
+    site: AnthropometricCircumferenceSite,
+    side: AnthropometricMeasurementSide,
+    state: AnthropometricCircumferenceState,
+  ): string {
+    return (
+      form.circumferenceMeasurements.find(
+        (
+          measurement,
+        ) =>
+          measurement.site ===
+            site &&
+          measurement.side ===
+            side &&
+          measurement.state ===
+            state,
+      )?.valueCm ??
+      ''
+    );
+  }
+
+  function renderCircumferenceInput(
+    label: string,
+    site: AnthropometricCircumferenceSite,
+    side: AnthropometricMeasurementSide,
+    state: AnthropometricCircumferenceState,
+  ) {
+    return (
+      <label className="space-y-1.5">
+        <span className="text-sm font-medium">
+          {label}
+        </span>
+
+        <div className="relative">
+          <input
+            type="text"
+            inputMode="decimal"
+            value={
+              getCircumferenceValue(
+                site,
+                side,
+                state,
+              )
+            }
+            onChange={(
+              event,
+            ) =>
+              updateCircumferenceValue(
+                site,
+                side,
+                state,
+                event.target.value,
+              )
+            }
+            className="h-10 w-full rounded-md border bg-background px-3 pr-12 text-sm"
+          />
+
+          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-muted-foreground">
+            cm
+          </span>
+        </div>
+      </label>
+    );
+  }
+
   function renderForm() {
     const hasPrimaryMeasurement =
       [
@@ -953,6 +1462,14 @@ export function AnthropometricAssessmentsCard({
         ) =>
           Boolean(
             value.trim(),
+          ),
+      ) ||
+      form.circumferenceMeasurements.some(
+        (
+          measurement,
+        ) =>
+          Boolean(
+            measurement.valueCm.trim(),
           ),
       ) ||
       form.skinfoldMeasurements.some(
@@ -1108,314 +1625,672 @@ export function AnthropometricAssessmentsCard({
           </label>
         </section>
 
-        <section className="space-y-4 border-t pt-5">
+        <section className="space-y-5 border-t pt-5">
           <div>
             <h4 className="font-medium">
               Circunferências
             </h4>
 
             <p className="text-xs text-muted-foreground">
-              Perímetros corporais em centímetros.
+              Registre os perímetros corporais em centímetros. Medidas bilaterais são separadas entre lado direito e esquerdo para permitir acompanhamento de simetria e evolução corporal.
             </p>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {renderNumberInput(
-              'Cintura',
-              'waistCircumferenceCm',
-              'cm',
-            )}
+          <div className="space-y-4">
+            <div>
+              <h5 className="text-sm font-medium">
+                Tronco
+              </h5>
 
-            {renderNumberInput(
-              'Quadril',
-              'hipCircumferenceCm',
-              'cm',
-            )}
+              <p className="mt-1 text-xs text-muted-foreground">
+                Medidas centrais utilizadas no acompanhamento antropométrico e da composição corporal.
+              </p>
+            </div>
 
-            {renderNumberInput(
-              'Abdômen',
-              'abdomenCircumferenceCm',
-              'cm',
-            )}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {renderCircumferenceInput(
+                'Pescoço',
+                'NECK',
+                'NOT_APPLICABLE',
+                'NOT_APPLICABLE',
+              )}
 
-            {renderNumberInput(
-              'Tórax',
-              'chestCircumferenceCm',
-              'cm',
-            )}
+              {renderCircumferenceInput(
+                'Ombros',
+                'SHOULDERS',
+                'NOT_APPLICABLE',
+                'NOT_APPLICABLE',
+              )}
 
-            {renderNumberInput(
-              'Braço',
-              'armCircumferenceCm',
-              'cm',
-            )}
+              {renderCircumferenceInput(
+                'Tórax',
+                'CHEST',
+                'NOT_APPLICABLE',
+                'NOT_APPLICABLE',
+              )}
 
-            {renderNumberInput(
-              'Coxa',
-              'thighCircumferenceCm',
-              'cm',
-            )}
+              {renderCircumferenceInput(
+                'Cintura',
+                'WAIST',
+                'NOT_APPLICABLE',
+                'NOT_APPLICABLE',
+              )}
 
-            {renderNumberInput(
-              'Panturrilha',
-              'calfCircumferenceCm',
-              'cm',
-            )}
+              {renderCircumferenceInput(
+                'Abdômen',
+                'ABDOMEN',
+                'NOT_APPLICABLE',
+                'NOT_APPLICABLE',
+              )}
+
+              {renderCircumferenceInput(
+                'Quadril',
+                'HIP',
+                'NOT_APPLICABLE',
+                'NOT_APPLICABLE',
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-4 border-t border-dashed pt-4">
+            <div>
+              <h5 className="text-sm font-medium">
+                Membros superiores
+              </h5>
+
+              <p className="mt-1 text-xs text-muted-foreground">
+                Braços são registrados relaxados e contraídos. Antebraços são separados por lado.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Braço relaxado
+                </p>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {renderCircumferenceInput(
+                    'Direito',
+                    'ARM',
+                    'RIGHT',
+                    'RELAXED',
+                  )}
+
+                  {renderCircumferenceInput(
+                    'Esquerdo',
+                    'ARM',
+                    'LEFT',
+                    'RELAXED',
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Braço contraído
+                </p>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {renderCircumferenceInput(
+                    'Direito',
+                    'ARM',
+                    'RIGHT',
+                    'CONTRACTED',
+                  )}
+
+                  {renderCircumferenceInput(
+                    'Esquerdo',
+                    'ARM',
+                    'LEFT',
+                    'CONTRACTED',
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Antebraço
+                </p>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {renderCircumferenceInput(
+                    'Direito',
+                    'FOREARM',
+                    'RIGHT',
+                    'NOT_APPLICABLE',
+                  )}
+
+                  {renderCircumferenceInput(
+                    'Esquerdo',
+                    'FOREARM',
+                    'LEFT',
+                    'NOT_APPLICABLE',
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4 border-t border-dashed pt-4">
+            <div>
+              <h5 className="text-sm font-medium">
+                Membros inferiores
+              </h5>
+
+              <p className="mt-1 text-xs text-muted-foreground">
+                Coxas e panturrilhas são registradas bilateralmente para acompanhar hipertrofia, evolução e possíveis assimetrias.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Coxa
+                </p>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {renderCircumferenceInput(
+                    'Direita',
+                    'THIGH',
+                    'RIGHT',
+                    'NOT_APPLICABLE',
+                  )}
+
+                  {renderCircumferenceInput(
+                    'Esquerda',
+                    'THIGH',
+                    'LEFT',
+                    'NOT_APPLICABLE',
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Panturrilha
+                </p>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {renderCircumferenceInput(
+                    'Direita',
+                    'CALF',
+                    'RIGHT',
+                    'NOT_APPLICABLE',
+                  )}
+
+                  {renderCircumferenceInput(
+                    'Esquerda',
+                    'CALF',
+                    'LEFT',
+                    'NOT_APPLICABLE',
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
         <section className="space-y-4 border-t pt-5">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h4 className="font-medium">
-                Dobras cutâneas
-              </h4>
+          <div>
+            <h4 className="font-medium">
+              Dobras cutâneas
+            </h4>
 
-              <p className="text-xs text-muted-foreground">
-                Leituras brutas preservadas para cálculos posteriores.
-              </p>
-            </div>
-
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={
-                addSkinfold
-              }
-            >
-              <Plus className="size-4" />
-
-              Adicionar dobra
-            </Button>
+            <p className="text-xs text-muted-foreground">
+              Selecione o protocolo. A Higeia organiza automaticamente os pontos de medição necessários.
+            </p>
           </div>
 
-          {form.skinfoldMeasurements.length >
-            0 && (
-            <label className="block max-w-sm space-y-1.5">
-              <span className="text-sm font-medium">
-                Protocolo *
-              </span>
+          <label className="block max-w-sm space-y-1.5">
+            <span className="text-sm font-medium">
+              Protocolo
+            </span>
 
-              <select
-                value={
-                  form.skinfoldProtocol
-                }
-                onChange={(
-                  event,
-                ) =>
-                  updateField(
-                    'skinfoldProtocol',
-                    event.target.value as
-                      SkinfoldProtocol | '',
-                  )
-                }
-                className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-              >
-                <option value="">
-                  Selecione
-                </option>
+            <select
+              value={
+                form.skinfoldProtocol
+              }
+              onChange={(
+                event,
+              ) =>
+                handleSkinfoldProtocolChange(
+                  event.target.value as
+                    SkinfoldProtocol | '',
+                )
+              }
+              className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+            >
+              <option value="">
+                Selecione
+              </option>
 
-                {Object.entries(
-                  skinfoldProtocolLabels,
-                ).map(
-                  ([
-                    value,
-                    label,
-                  ]) => (
-                    <option
-                      key={value}
-                      value={value}
-                    >
-                      {label}
-                    </option>
-                  ),
-                )}
-              </select>
-            </label>
-          )}
-
-          {form.skinfoldMeasurements.length ===
-            0 ? (
-            <p className="text-sm text-muted-foreground">
-              Nenhuma dobra cutânea adicionada.
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {form.skinfoldMeasurements.map(
-                (
-                  measurement,
-                  index,
-                ) => (
-                  <div
-                    key={`${index}-${measurement.site}-${measurement.readingNumber}`}
-                    className="grid gap-3 rounded-lg border p-3 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr_auto]"
+              {Object.entries(
+                skinfoldProtocolLabels,
+              ).map(
+                ([
+                  value,
+                  label,
+                ]) => (
+                  <option
+                    key={value}
+                    value={value}
                   >
-                    <label className="space-y-1.5">
-                      <span className="text-xs font-medium">
-                        Local
-                      </span>
-
-                      <select
-                        value={
-                          measurement.site
-                        }
-                        onChange={(
-                          event,
-                        ) =>
-                          updateSkinfold(
-                            index,
-                            {
-                              site:
-                                event.target.value as
-                                  SkinfoldSite,
-                            },
-                          )
-                        }
-                        className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-                      >
-                        {Object.entries(
-                          skinfoldSiteLabels,
-                        ).map(
-                          ([
-                            value,
-                            label,
-                          ]) => (
-                            <option
-                              key={value}
-                              value={value}
-                            >
-                              {label}
-                            </option>
-                          ),
-                        )}
-                      </select>
-                    </label>
-
-                    <label className="space-y-1.5">
-                      <span className="text-xs font-medium">
-                        Lado
-                      </span>
-
-                      <select
-                        value={
-                          measurement.side
-                        }
-                        onChange={(
-                          event,
-                        ) =>
-                          updateSkinfold(
-                            index,
-                            {
-                              side:
-                                event.target.value as
-                                  SkinfoldMeasurementSide,
-                            },
-                          )
-                        }
-                        className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-                      >
-                        {Object.entries(
-                          skinfoldSideLabels,
-                        ).map(
-                          ([
-                            value,
-                            label,
-                          ]) => (
-                            <option
-                              key={value}
-                              value={value}
-                            >
-                              {label}
-                            </option>
-                          ),
-                        )}
-                      </select>
-                    </label>
-
-                    <label className="space-y-1.5">
-                      <span className="text-xs font-medium">
-                        Leitura
-                      </span>
-
-                      <select
-                        value={
-                          measurement.readingNumber
-                        }
-                        onChange={(
-                          event,
-                        ) =>
-                          updateSkinfold(
-                            index,
-                            {
-                              readingNumber:
-                                Number(
-                                  event.target.value,
-                                ),
-                            },
-                          )
-                        }
-                        className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-                      >
-                        <option value={1}>
-                          1
-                        </option>
-
-                        <option value={2}>
-                          2
-                        </option>
-
-                        <option value={3}>
-                          3
-                        </option>
-                      </select>
-                    </label>
-
-                    <label className="space-y-1.5">
-                      <span className="text-xs font-medium">
-                        Valor (mm)
-                      </span>
-
-                      <input
-                        type="text"
-                        inputMode="decimal"
-                        value={
-                          measurement.valueMm
-                        }
-                        onChange={(
-                          event,
-                        ) =>
-                          updateSkinfold(
-                            index,
-                            {
-                              valueMm:
-                                event.target.value,
-                            },
-                          )
-                        }
-                        className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-                      />
-                    </label>
-
-                    <div className="flex items-end">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() =>
-                          removeSkinfold(
-                            index,
-                          )
-                        }
-                        aria-label="Remover dobra cutânea"
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
-                    </div>
-                  </div>
+                    {label}
+                  </option>
                 ),
               )}
+            </select>
+          </label>
+
+          {form.skinfoldProtocol ===
+            'JACKSON_POLLOCK_3' &&
+            !biologicalSex && (
+              <div className="rounded-lg border border-dashed p-4">
+                <p className="text-sm font-medium">
+                  Sexo biológico necessário
+                </p>
+
+                <p className="mt-1 text-xs text-muted-foreground">
+                  O protocolo Jackson-Pollock 3 utiliza pontos de medição diferentes conforme o sexo biológico. Cadastre essa informação no perfil do paciente para a Higeia montar a coleta automaticamente.
+                </p>
+              </div>
+            )}
+
+          {(form.skinfoldProtocol ===
+            'JACKSON_POLLOCK_3' ||
+            form.skinfoldProtocol ===
+              'JACKSON_POLLOCK_7') &&
+            form.skinfoldMeasurements.length >
+              0 && (
+              <div className="space-y-4">
+                <div className="rounded-lg bg-muted/40 p-3">
+                  <p className="text-sm font-medium">
+                    Coleta guiada
+                  </p>
+
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Os locais abaixo foram definidos automaticamente pelo protocolo selecionado. As medições são registradas no lado direito.
+                  </p>
+                </div>
+
+                {getJacksonPollockRequiredSites(
+                  form.skinfoldProtocol,
+                  biologicalSex,
+                ).map(
+                  (
+                    site,
+                  ) => {
+                    const siteMeasurements =
+                      form.skinfoldMeasurements
+                        .map(
+                          (
+                            measurement,
+                            index,
+                          ) => ({
+                            measurement,
+                            index,
+                          }),
+                        )
+                        .filter(
+                          ({
+                            measurement,
+                          }) =>
+                            measurement.site ===
+                              site &&
+                            measurement.side ===
+                              'RIGHT',
+                        )
+                        .sort(
+                          (
+                            first,
+                            second,
+                          ) =>
+                            first.measurement
+                              .readingNumber -
+                            second.measurement
+                              .readingNumber,
+                        );
+
+                    return (
+                      <div
+                        key={site}
+                        className="space-y-3 rounded-lg border p-4"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div>
+                            <p className="font-medium">
+                              {
+                                skinfoldSiteLabels[
+                                  site
+                                ]
+                              }
+                            </p>
+
+                            <p className="text-xs text-muted-foreground">
+                              Lado direito
+                            </p>
+                          </div>
+
+                          {siteMeasurements.length <
+                            3 && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                addGuidedSkinfoldReading(
+                                  site,
+                                )
+                              }
+                            >
+                              <Plus className="size-4" />
+
+                              Adicionar leitura
+                            </Button>
+                          )}
+                        </div>
+
+                        <div className="grid gap-3 sm:grid-cols-3">
+                          {siteMeasurements.map(
+                            ({
+                              measurement,
+                              index,
+                            }) => (
+                              <div
+                                key={`${site}-${measurement.readingNumber}`}
+                                className="space-y-1.5"
+                              >
+                                <span className="text-xs font-medium">
+                                  Leitura{' '}
+                                  {
+                                    measurement.readingNumber
+                                  }
+                                </span>
+
+                                <div className="flex gap-2">
+                                  <div className="relative flex-1">
+                                    <input
+                                      type="text"
+                                      inputMode="decimal"
+                                      value={
+                                        measurement.valueMm
+                                      }
+                                      onChange={(
+                                        event,
+                                      ) =>
+                                        updateSkinfold(
+                                          index,
+                                          {
+                                            valueMm:
+                                              event
+                                                .target
+                                                .value,
+                                          },
+                                        )
+                                      }
+                                      placeholder="0,0"
+                                      className="h-10 w-full rounded-md border bg-background px-3 pr-10 text-sm"
+                                    />
+
+                                    <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-muted-foreground">
+                                      mm
+                                    </span>
+                                  </div>
+
+                                  {measurement.readingNumber >
+                                    1 && (
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() =>
+                                        removeGuidedSkinfoldReading(
+                                          site,
+                                          measurement.readingNumber,
+                                        )
+                                      }
+                                      aria-label={`Remover leitura ${measurement.readingNumber} de ${skinfoldSiteLabels[site]}`}
+                                    >
+                                      <Trash2 className="size-4" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            ),
+                          )}
+                        </div>
+                      </div>
+                    );
+                  },
+                )}
+              </div>
+            )}
+
+          {form.skinfoldProtocol ===
+            'OTHER' && (
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium">
+                    Protocolo personalizado
+                  </p>
+
+                  <p className="text-xs text-muted-foreground">
+                    Adicione livremente os locais e leituras necessários.
+                  </p>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={
+                    addSkinfold
+                  }
+                >
+                  <Plus className="size-4" />
+
+                  Adicionar dobra
+                </Button>
+              </div>
+
+              {form.skinfoldMeasurements.length ===
+                0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Nenhuma dobra cutânea adicionada.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {form.skinfoldMeasurements.map(
+                    (
+                      measurement,
+                      index,
+                    ) => (
+                      <div
+                        key={`${index}-${measurement.site}-${measurement.side}-${measurement.readingNumber}`}
+                        className="grid gap-3 rounded-lg border p-3 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr_auto]"
+                      >
+                        <label className="space-y-1.5">
+                          <span className="text-xs font-medium">
+                            Local
+                          </span>
+
+                          <select
+                            value={
+                              measurement.site
+                            }
+                            onChange={(
+                              event,
+                            ) =>
+                              updateSkinfold(
+                                index,
+                                {
+                                  site:
+                                    event.target.value as
+                                      SkinfoldSite,
+                                },
+                              )
+                            }
+                            className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                          >
+                            {Object.entries(
+                              skinfoldSiteLabels,
+                            ).map(
+                              ([
+                                value,
+                                label,
+                              ]) => (
+                                <option
+                                  key={value}
+                                  value={value}
+                                >
+                                  {label}
+                                </option>
+                              ),
+                            )}
+                          </select>
+                        </label>
+
+                        <label className="space-y-1.5">
+                          <span className="text-xs font-medium">
+                            Lado
+                          </span>
+
+                          <select
+                            value={
+                              measurement.side
+                            }
+                            onChange={(
+                              event,
+                            ) =>
+                              updateSkinfold(
+                                index,
+                                {
+                                  side:
+                                    event.target.value as
+                                      SkinfoldMeasurementSide,
+                                },
+                              )
+                            }
+                            className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                          >
+                            {Object.entries(
+                              skinfoldSideLabels,
+                            ).map(
+                              ([
+                                value,
+                                label,
+                              ]) => (
+                                <option
+                                  key={value}
+                                  value={value}
+                                >
+                                  {label}
+                                </option>
+                              ),
+                            )}
+                          </select>
+                        </label>
+
+                        <label className="space-y-1.5">
+                          <span className="text-xs font-medium">
+                            Leitura
+                          </span>
+
+                          <select
+                            value={
+                              measurement.readingNumber
+                            }
+                            onChange={(
+                              event,
+                            ) =>
+                              updateSkinfold(
+                                index,
+                                {
+                                  readingNumber:
+                                    Number(
+                                      event.target.value,
+                                    ),
+                                },
+                              )
+                            }
+                            className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                          >
+                            <option value={1}>
+                              1
+                            </option>
+
+                            <option value={2}>
+                              2
+                            </option>
+
+                            <option value={3}>
+                              3
+                            </option>
+                          </select>
+                        </label>
+
+                        <label className="space-y-1.5">
+                          <span className="text-xs font-medium">
+                            Valor
+                          </span>
+
+                          <div className="relative">
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={
+                                measurement.valueMm
+                              }
+                              onChange={(
+                                event,
+                              ) =>
+                                updateSkinfold(
+                                  index,
+                                  {
+                                    valueMm:
+                                      event.target.value,
+                                  },
+                                )
+                              }
+                              placeholder="0,0"
+                              className="h-10 w-full rounded-md border bg-background px-3 pr-10 text-sm"
+                            />
+
+                            <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs text-muted-foreground">
+                              mm
+                            </span>
+                          </div>
+                        </label>
+
+                        <div className="flex items-end">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() =>
+                              removeSkinfold(
+                                index,
+                              )
+                            }
+                            aria-label="Remover dobra cutânea"
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ),
+                  )}
+                </div>
+              )}
             </div>
+          )}
+
+          {!form.skinfoldProtocol && (
+            <p className="text-sm text-muted-foreground">
+              Selecione um protocolo para iniciar a coleta de dobras cutâneas.
+            </p>
           )}
         </section>
 
@@ -1549,189 +2424,58 @@ export function AnthropometricAssessmentsCard({
           !assessmentsQuery.isError &&
           assessmentsQuery.data?.length ===
             0 &&
-          !isCreating && (
+          !isCreating &&
+          !editingId && (
           <p className="text-sm text-muted-foreground">
             Nenhuma avaliação antropométrica registrada.
           </p>
         )}
 
-        {isCreating && (
+        {(isCreating || editingId) && (
           <div className="rounded-xl border p-4">
             {renderForm()}
           </div>
         )}
 
-        {assessmentsQuery.data?.map(
-          (
-            assessment,
-          ) => {
-            const summaryMeasurements = [
-              [
-                'Peso',
-                formatMeasurement(
-                  assessment.weightKg,
-                  'kg',
-                ),
-              ],
-              [
-                'Altura',
-                formatMeasurement(
-                  assessment.heightCm,
-                  'cm',
-                ),
-              ],
-              [
-                'Gordura corporal',
-                formatMeasurement(
-                  assessment.bodyFatPercentage,
-                  '%',
-                ),
-              ],
-              [
-                'Cintura',
-                formatMeasurement(
-                  assessment.waistCircumferenceCm,
-                  'cm',
-                ),
-              ],
-              [
-                'Quadril',
-                formatMeasurement(
-                  assessment.hipCircumferenceCm,
-                  'cm',
-                ),
-              ],
-            ].filter(
-              (
-                item,
+        {assessmentsQuery.data &&
+          assessmentsQuery.data.length >
+            0 &&
+          !isCreating &&
+          !editingId && (
+            <AnthropometricAssessmentComparisonPanel
+              patientId={
+                patientId
+              }
+              patientName={
+                patientName
+              }
+              patientBirthDate={
+                patientBirthDate
+              }
+              patientCpf={
+                patientCpf
+              }
+              biologicalSex={
+                biologicalSex
+              }
+              assessments={
+                assessmentsQuery.data
+              }
+              onEditAssessment={
+                startEditing
+              }
+              onDeleteAssessment={(
+                assessment,
               ) =>
-                item[1] !==
-                null,
-            );
-
-            return (
-              <div
-                key={
-                  assessment.id
-                }
-                className="rounded-xl border p-4"
-              >
-                {editingId ===
-                assessment.id ? (
-                  renderForm()
-                ) : (
-                  <div className="space-y-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="space-y-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="font-medium">
-                            Avaliação de{' '}
-                            {formatDate(
-                              assessment.measuredAt,
-                            )}
-                          </p>
-
-                          {assessment.bodyCompositionMethod && (
-                            <span className="rounded-full border px-2 py-0.5 text-xs text-muted-foreground">
-                              {
-                                bodyCompositionMethodLabels[
-                                  assessment.bodyCompositionMethod
-                                ]
-                              }
-                            </span>
-                          )}
-
-                          {assessment.skinfoldProtocol && (
-                            <span className="rounded-full border px-2 py-0.5 text-xs text-muted-foreground">
-                              {
-                                skinfoldProtocolLabels[
-                                  assessment.skinfoldProtocol
-                                ]
-                              }
-                            </span>
-                          )}
-                        </div>
-
-                        {summaryMeasurements.length >
-                          0 && (
-                          <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted-foreground">
-                            {summaryMeasurements.map(
-                              (
-                                [
-                                  label,
-                                  value,
-                                ],
-                              ) => (
-                                <span
-                                  key={
-                                    label
-                                  }
-                                >
-                                  {label}:{' '}
-                                  {value}
-                                </span>
-                              ),
-                            )}
-                          </div>
-                        )}
-
-                        {assessment.skinfoldMeasurements.length >
-                          0 && (
-                          <p className="text-sm text-muted-foreground">
-                            Dobras cutâneas:{' '}
-                            {
-                              assessment.skinfoldMeasurements.length
-                            }{' '}
-                            leitura(s)
-                          </p>
-                        )}
-
-                        {assessment.notes && (
-                          <p className="text-sm text-muted-foreground">
-                            {assessment.notes}
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="flex gap-1">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() =>
-                            startEditing(
-                              assessment,
-                            )
-                          }
-                          aria-label="Editar avaliação antropométrica"
-                        >
-                          <Pencil className="size-4" />
-                        </Button>
-
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          disabled={
-                            deleteMutation.isPending
-                          }
-                          onClick={() =>
-                            void handleDelete(
-                              assessment,
-                            )
-                          }
-                          aria-label="Excluir avaliação antropométrica"
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          },
-        )}
+                void handleDelete(
+                  assessment,
+                )
+              }
+              isDeletingAssessment={
+                deleteMutation.isPending
+              }
+            />
+          )}
 
         {(createMutation.isError ||
           updateMutation.isError ||

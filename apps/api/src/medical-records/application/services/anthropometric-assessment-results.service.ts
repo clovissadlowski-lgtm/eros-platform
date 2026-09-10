@@ -28,6 +28,10 @@ import {
 } from '../../domain/services/anthropometric-clinical-context.service';
 
 import {
+  AnthropometricJacksonPollockEligibilityService,
+  JacksonPollockEligibilityResult,
+} from '../../domain/services/anthropometric-jackson-pollock-eligibility.service';
+import {
   AnthropometricSkinfoldProtocolService,
 } from '../../domain/services/anthropometric-skinfold-protocol.service';
 
@@ -40,6 +44,9 @@ export interface AnthropometricAssessmentResults {
 
   calculations:
     AnthropometricCalculationResult[];
+
+  jacksonPollockEligibility:
+    JacksonPollockEligibilityResult | null;
 }
 
 @Injectable()
@@ -50,6 +57,8 @@ export class AnthropometricAssessmentResultsService {
   private readonly clinicalContextService =
     new AnthropometricClinicalContextService();
 
+  private readonly jacksonPollockEligibilityService =
+    new AnthropometricJacksonPollockEligibilityService();
   private readonly skinfoldProtocolService =
     new AnthropometricSkinfoldProtocolService();
 
@@ -92,16 +101,18 @@ export class AnthropometricAssessmentResultsService {
       );
     }
 
-    this.appendJacksonPollockCalculations(
-      calculations,
-      assessment,
-      clinicalContext,
-    );
+    const jacksonPollockEligibility =
+      this.appendJacksonPollockCalculations(
+        calculations,
+        assessment,
+        clinicalContext,
+      );
 
     return {
       assessment,
       clinicalContext,
       calculations,
+      jacksonPollockEligibility,
     };
   }
 
@@ -114,7 +125,7 @@ export class AnthropometricAssessmentResultsService {
 
     clinicalContext:
       AnthropometricClinicalContext,
-  ): void {
+  ): JacksonPollockEligibilityResult | null {
     const biologicalSex =
       this.resolveJacksonPollockBiologicalSex(
         clinicalContext.biologicalSex,
@@ -126,13 +137,29 @@ export class AnthropometricAssessmentResultsService {
       );
 
     if (
-      !biologicalSex ||
-      !protocol ||
-      !clinicalContext.age
+      !protocol
     ) {
-      return;
+      return null;
     }
 
+    const ageYears =
+      clinicalContext.age?.years ??
+      null;
+
+    const eligibility =
+      this.jacksonPollockEligibilityService
+        .evaluate({
+          biologicalSex,
+          ageYears,
+        });
+
+    if (
+      !eligibility.eligible ||
+      !biologicalSex ||
+      ageYears === null
+    ) {
+      return eligibility;
+    }
     const preparation =
       this.skinfoldProtocolService.prepare({
         biologicalSex,
@@ -148,7 +175,7 @@ export class AnthropometricAssessmentResultsService {
       !preparation.eligible ||
       preparation.sumSkinfoldsMm === null
     ) {
-      return;
+      return eligibility;
     }
 
     const bodyDensity =
@@ -158,8 +185,7 @@ export class AnthropometricAssessmentResultsService {
 
           protocol,
 
-          ageYears:
-            clinicalContext.age.years,
+          ageYears,
 
           sumSkinfoldsMm:
             preparation.sumSkinfoldsMm,
@@ -183,7 +209,7 @@ export class AnthropometricAssessmentResultsService {
     if (
       assessment.weightKg === null
     ) {
-      return;
+      return eligibility;
     }
 
     calculations.push(
@@ -207,6 +233,8 @@ export class AnthropometricAssessmentResultsService {
             bodyFat.value,
         }),
     );
+
+    return eligibility;
   }
 
   private resolveJacksonPollockBiologicalSex(

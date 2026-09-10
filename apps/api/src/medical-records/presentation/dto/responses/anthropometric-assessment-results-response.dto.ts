@@ -163,6 +163,56 @@ export class AnthropometricCalculationResponseDto {
   method!: string;
 }
 
+export class AnthropometricReferenceAgeRangeResponseDto {
+  @ApiProperty({
+    example:
+      18,
+  })
+  minimumYears!: number;
+
+  @ApiProperty({
+    example:
+      61,
+  })
+  maximumYears!: number;
+}
+
+export class AnthropometricJacksonPollockEligibilityResponseDto {
+  @ApiProperty({
+    example:
+      true,
+  })
+  eligible!: boolean;
+
+  @ApiProperty({
+    enum: [
+      'ELIGIBLE',
+      'MISSING_AGE',
+      'MISSING_BIOLOGICAL_SEX',
+      'BELOW_REFERENCE_AGE',
+      'ABOVE_REFERENCE_AGE',
+    ],
+
+    example:
+      'ELIGIBLE',
+  })
+  reason!:
+    | 'ELIGIBLE'
+    | 'MISSING_AGE'
+    | 'MISSING_BIOLOGICAL_SEX'
+    | 'BELOW_REFERENCE_AGE'
+    | 'ABOVE_REFERENCE_AGE';
+
+  @ApiPropertyOptional({
+    type:
+      AnthropometricReferenceAgeRangeResponseDto,
+
+    nullable:
+      true,
+  })
+  referenceAgeRange!:
+    AnthropometricReferenceAgeRangeResponseDto | null;
+}
 export class AnthropometricAssessmentResultsResponseDto {
   @ApiProperty({
     type:
@@ -187,4 +237,14 @@ export class AnthropometricAssessmentResultsResponseDto {
   })
   calculations!:
     AnthropometricCalculationResponseDto[];
+
+  @ApiPropertyOptional({
+    type:
+      AnthropometricJacksonPollockEligibilityResponseDto,
+
+    nullable:
+      true,
+  })
+  jacksonPollockEligibility!:
+    AnthropometricJacksonPollockEligibilityResponseDto | null;
 }

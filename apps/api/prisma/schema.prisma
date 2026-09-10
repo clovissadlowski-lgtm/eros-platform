@@ -792,7 +792,8 @@ model AnthropometricAssessment {
 
   medicalRecord MedicalRecord @relation(fields: [medicalRecordId], references: [id], onDelete: Cascade)
 
-  skinfoldMeasurements AnthropometricSkinfoldMeasurement[]
+  skinfoldMeasurements      AnthropometricSkinfoldMeasurement[]
+  circumferenceMeasurements AnthropometricCircumferenceMeasurement[]
 
   @@index([organizationId])
   @@index([medicalRecordId])
@@ -826,6 +827,31 @@ model AnthropometricSkinfoldMeasurement {
   @@index([site])
   @@index([side])
   @@map("anthropometric_skinfold_measurements")
+}
+
+model AnthropometricCircumferenceMeasurement {
+  id String @id @default(uuid()) @db.Uuid
+
+  anthropometricAssessmentId String @db.Uuid
+
+  site AnthropometricCircumferenceSite
+
+  side AnthropometricMeasurementSide @default(NOT_APPLICABLE)
+
+  state AnthropometricCircumferenceState @default(NOT_APPLICABLE)
+
+  valueCm Decimal @db.Decimal(6, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  anthropometricAssessment AnthropometricAssessment @relation(fields: [anthropometricAssessmentId], references: [id], onDelete: Cascade)
+
+  @@unique([anthropometricAssessmentId, site, side, state])
+  @@index([anthropometricAssessmentId])
+  @@index([site])
+  @@index([side])
+  @@map("anthropometric_circumference_measurements")
 }
 
 model LaboratoryExam {
@@ -892,6 +918,32 @@ model LaboratoryResult {
   @@index([name])
   @@index([interpretation])
   @@map("laboratory_results")
+}
+
+enum AnthropometricCircumferenceSite {
+  NECK
+  SHOULDERS
+  CHEST
+  WAIST
+  ABDOMEN
+  HIP
+  ARM
+  FOREARM
+  THIGH
+  CALF
+  OTHER
+}
+
+enum AnthropometricMeasurementSide {
+  RIGHT
+  LEFT
+  NOT_APPLICABLE
+}
+
+enum AnthropometricCircumferenceState {
+  RELAXED
+  CONTRACTED
+  NOT_APPLICABLE
 }
 
 enum SkinfoldMeasurementSide {

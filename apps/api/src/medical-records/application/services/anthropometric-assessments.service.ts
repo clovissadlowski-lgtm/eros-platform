@@ -17,6 +17,10 @@ import {
 
 import {
   AnthropometricAssessment,
+  AnthropometricCircumferenceMeasurement,
+  AnthropometricCircumferenceSite,
+  AnthropometricCircumferenceState,
+  AnthropometricMeasurementSide,
   AnthropometricSkinfoldMeasurement,
   BodyCompositionMethod,
   SkinfoldMeasurementSide,
@@ -57,6 +61,20 @@ export interface AnthropometricSkinfoldMeasurementInput {
     number;
 
   valueMm:
+    number;
+}
+
+export interface AnthropometricCircumferenceMeasurementInput {
+  site:
+    AnthropometricCircumferenceSite;
+
+  side?:
+    AnthropometricMeasurementSide;
+
+  state?:
+    AnthropometricCircumferenceState;
+
+  valueCm:
     number;
 }
 
@@ -111,6 +129,9 @@ export interface CreateAnthropometricAssessmentInput {
 
   skinfoldMeasurements?:
     AnthropometricSkinfoldMeasurementInput[];
+
+  circumferenceMeasurements?:
+    AnthropometricCircumferenceMeasurementInput[];
 
   notes?:
     string;
@@ -167,6 +188,9 @@ export interface UpdateAnthropometricAssessmentInput {
 
   skinfoldMeasurements?:
     AnthropometricSkinfoldMeasurementInput[];
+
+  circumferenceMeasurements?:
+    AnthropometricCircumferenceMeasurementInput[];
 
   notes?:
     string | null;
@@ -263,6 +287,14 @@ export class AnthropometricAssessmentsService {
         null,
       skinfoldMeasurements,
     );
+
+    const circumferenceMeasurements =
+      this.createCircumferenceMeasurements(
+        assessmentId,
+        input.circumferenceMeasurements ??
+          [],
+        timestamp,
+      );
 
     const assessment:
       AnthropometricAssessment = {
@@ -365,6 +397,8 @@ export class AnthropometricAssessmentsService {
           null,
 
         skinfoldMeasurements,
+
+        circumferenceMeasurements,
 
         notes:
           this.normalizeOptionalText(
@@ -513,6 +547,16 @@ export class AnthropometricAssessmentsService {
         ? input.skinfoldProtocol
         : assessment.skinfoldProtocol;
 
+    const circumferenceMeasurements =
+      input.circumferenceMeasurements !==
+      undefined
+        ? this.createCircumferenceMeasurements(
+            assessment.id,
+            input.circumferenceMeasurements,
+            timestamp,
+          )
+        : assessment.circumferenceMeasurements;
+
     this.validateSkinfoldConfiguration(
       skinfoldProtocol,
       skinfoldMeasurements,
@@ -656,6 +700,8 @@ export class AnthropometricAssessmentsService {
         skinfoldProtocol,
 
         skinfoldMeasurements,
+
+        circumferenceMeasurements,
 
         notes:
           input.notes !==
@@ -819,6 +865,169 @@ export class AnthropometricAssessmentsService {
     );
   }
 
+  private createCircumferenceMeasurements(
+    assessmentId: string,
+    inputs:
+      AnthropometricCircumferenceMeasurementInput[],
+    timestamp: string,
+  ): AnthropometricCircumferenceMeasurement[] {
+    const uniqueKeys =
+      new Set<string>();
+
+    const trunkSites =
+      new Set<AnthropometricCircumferenceSite>([
+        AnthropometricCircumferenceSite.NECK,
+        AnthropometricCircumferenceSite.SHOULDERS,
+        AnthropometricCircumferenceSite.CHEST,
+        AnthropometricCircumferenceSite.WAIST,
+        AnthropometricCircumferenceSite.ABDOMEN,
+        AnthropometricCircumferenceSite.HIP,
+      ]);
+
+    const bilateralSites =
+      new Set<AnthropometricCircumferenceSite>([
+        AnthropometricCircumferenceSite.ARM,
+        AnthropometricCircumferenceSite.FOREARM,
+        AnthropometricCircumferenceSite.THIGH,
+        AnthropometricCircumferenceSite.CALF,
+      ]);
+
+    return inputs.map(
+      (
+        input,
+      ) => {
+        const side =
+          input.side ??
+          AnthropometricMeasurementSide.NOT_APPLICABLE;
+
+        const state =
+          input.state ??
+          AnthropometricCircumferenceState.NOT_APPLICABLE;
+
+        if (
+          !Number.isFinite(
+            input.valueCm,
+          ) ||
+          input.valueCm <=
+            0
+        ) {
+          throw new BadRequestException(
+            'Circumference measurement must be greater than 0 cm.',
+          );
+        }
+
+        if (
+          trunkSites.has(
+            input.site,
+          )
+        ) {
+          if (
+            side !==
+              AnthropometricMeasurementSide.NOT_APPLICABLE ||
+            state !==
+              AnthropometricCircumferenceState.NOT_APPLICABLE
+          ) {
+            throw new BadRequestException(
+              'Trunk circumference measurements must not define side or contraction state.',
+            );
+          }
+        }
+
+        if (
+          bilateralSites.has(
+            input.site,
+          )
+        ) {
+          if (
+            side !==
+              AnthropometricMeasurementSide.RIGHT &&
+            side !==
+              AnthropometricMeasurementSide.LEFT
+          ) {
+            throw new BadRequestException(
+              'Bilateral circumference measurements must define RIGHT or LEFT side.',
+            );
+          }
+        }
+
+        if (
+          input.site ===
+          AnthropometricCircumferenceSite.ARM
+        ) {
+          if (
+            state !==
+              AnthropometricCircumferenceState.RELAXED &&
+            state !==
+              AnthropometricCircumferenceState.CONTRACTED
+          ) {
+            throw new BadRequestException(
+              'Arm circumference measurements must define RELAXED or CONTRACTED state.',
+            );
+          }
+        }
+
+        if (
+          input.site ===
+            AnthropometricCircumferenceSite.FOREARM ||
+          input.site ===
+            AnthropometricCircumferenceSite.THIGH ||
+          input.site ===
+            AnthropometricCircumferenceSite.CALF
+        ) {
+          if (
+            state !==
+            AnthropometricCircumferenceState.NOT_APPLICABLE
+          ) {
+            throw new BadRequestException(
+              'Forearm, thigh and calf circumference measurements must not define contraction state.',
+            );
+          }
+        }
+
+        const key =
+          `${input.site}:${side}:${state}`;
+
+        if (
+          uniqueKeys.has(
+            key,
+          )
+        ) {
+          throw new BadRequestException(
+            'Duplicate circumference measurement for the same site, side and state.',
+          );
+        }
+
+        uniqueKeys.add(
+          key,
+        );
+
+        return {
+          id:
+            randomUUID(),
+
+          anthropometricAssessmentId:
+            assessmentId,
+
+          site:
+            input.site,
+
+          side,
+
+          state,
+
+          valueCm:
+            input.valueCm,
+
+          createdAt:
+            timestamp,
+
+          updatedAt:
+            timestamp,
+        };
+      },
+    );
+  }
+
   private validateSkinfoldConfiguration(
     protocol:
       SkinfoldProtocol | null,
@@ -880,6 +1089,8 @@ export class AnthropometricAssessmentsService {
       assessment.calfCircumferenceCm !==
         null ||
       assessment.skinfoldMeasurements.length >
+        0 ||
+      assessment.circumferenceMeasurements.length >
         0;
 
     if (

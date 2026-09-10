@@ -1126,6 +1126,18 @@ export function PatientProfileScreen({
         patientId={
           patient.id
         }
+        patientName={
+          patient.name
+        }
+        patientBirthDate={
+          patient.birthDate
+        }
+        patientCpf={
+          patient.cpf
+        }
+        biologicalSex={
+          patient.biologicalSex
+        }
       />
 
       <LaboratoryExamsCard

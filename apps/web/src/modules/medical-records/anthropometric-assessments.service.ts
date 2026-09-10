@@ -8,6 +8,7 @@ import {
 
 import type {
   AnthropometricAssessment,
+  AnthropometricAssessmentResults,
   CreateAnthropometricAssessmentInput,
   UpdateAnthropometricAssessmentInput,
 } from './medical-record.types';
@@ -81,6 +82,24 @@ export async function updateAnthropometricAssessment(
 
       body:
         input,
+    },
+  );
+}
+
+export async function getAnthropometricAssessmentResults(
+  patientId: string,
+  assessmentId: string,
+): Promise<AnthropometricAssessmentResults> {
+  return apiRequest<
+    AnthropometricAssessmentResults
+  >(
+    `/patients/${patientId}/medical-record/anthropometric-assessments/${assessmentId}/results`,
+    {
+      method:
+        'GET',
+
+      accessToken:
+        getAccessToken(),
     },
   );
 }

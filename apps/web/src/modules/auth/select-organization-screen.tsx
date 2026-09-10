@@ -59,14 +59,16 @@ function getRoleLabel(
 }
 
 export function SelectOrganizationScreen() {
-  const router = useRouter();
+  const router =
+    useRouter();
 
   const [
     selectedOrganizationId,
     setSelectedOrganizationId,
-  ] = useState<string | null>(
-    null,
-  );
+  ] =
+    useState<string | null>(
+      null,
+    );
 
   const organizationsQuery =
     useOrganizations();
@@ -78,6 +80,23 @@ export function SelectOrganizationScreen() {
     if (!selectedOrganizationId) {
       toast.error(
         'Selecione uma organização.',
+      );
+
+      return;
+    }
+
+    const selectedOrganization =
+      organizationsQuery.data?.find(
+        (
+          organization,
+        ) =>
+          organization.organizationId ===
+          selectedOrganizationId,
+      );
+
+    if (!selectedOrganization) {
+      toast.error(
+        'Não foi possível identificar a organização selecionada.',
       );
 
       return;
@@ -99,7 +118,9 @@ export function SelectOrganizationScreen() {
           'Sua sessão não está mais disponível. Faça login novamente.',
         );
 
-        router.replace('/login');
+        router.replace(
+          '/login',
+        );
 
         return;
       }
@@ -109,13 +130,22 @@ export function SelectOrganizationScreen() {
         refreshToken,
       );
 
+      authStorage.saveActiveOrganization(
+        selectedOrganization,
+      );
+
       toast.success(
         'Organização selecionada com sucesso.',
       );
 
-      router.push('/dashboard');
+      router.push(
+        '/dashboard',
+      );
     } catch (error) {
-      if (error instanceof ApiError) {
+      if (
+        error instanceof
+        ApiError
+      ) {
         if (
           error.code ===
           'INVALID_ACCESS_TOKEN'
@@ -126,7 +156,9 @@ export function SelectOrganizationScreen() {
             'Sua sessão expirou. Faça login novamente.',
           );
 
-          router.replace('/login');
+          router.replace(
+            '/login',
+          );
 
           return;
         }
@@ -192,7 +224,8 @@ export function SelectOrganizationScreen() {
   }
 
   const organizations =
-    organizationsQuery.data ?? [];
+    organizationsQuery.data ??
+    [];
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-muted/30 p-6">
@@ -216,7 +249,9 @@ export function SelectOrganizationScreen() {
           ) : (
             <div className="space-y-3">
               {organizations.map(
-                (organization) => {
+                (
+                  organization,
+                ) => {
                   const isSelected =
                     selectedOrganizationId ===
                     organization.organizationId;
@@ -237,7 +272,9 @@ export function SelectOrganizationScreen() {
                         isSelected
                           ? 'border-foreground bg-muted'
                           : 'hover:bg-muted/60',
-                      ].join(' ')}
+                      ].join(
+                        ' ',
+                      )}
                     >
                       <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-foreground text-background">
                         <Building2 className="size-5" />
