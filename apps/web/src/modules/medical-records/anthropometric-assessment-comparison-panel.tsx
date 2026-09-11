@@ -9,7 +9,6 @@ import {
 
 import {
   Maximize2,
-  MoreVertical,
   Printer,
   X,
 } from 'lucide-react';
@@ -43,6 +42,10 @@ import {
 import {
   AnthropometricAssessmentDetail,
 } from './anthropometry/anthropometric-assessment-detail';
+
+import {
+  AnthropometricHistoryTable,
+} from './anthropometry/anthropometric-history-table';
 
 import type {
   AnthropometricAssessment,
@@ -1398,14 +1401,6 @@ export function AnthropometricAssessmentComparisonPanel({
     );
 
   const [
-    openAssessmentMenuId,
-    setOpenAssessmentMenuId,
-  ] =
-    useState<string | null>(
-      null,
-    );
-
-  const [
     selectedAssessmentId,
     setSelectedAssessmentId,
   ] =
@@ -1426,71 +1421,6 @@ export function AnthropometricAssessmentComparisonPanel({
     [],
   );
 
-  useEffect(
-    () => {
-      if (!openAssessmentMenuId) {
-        return;
-      }
-
-      function handlePointerDown(
-        event: MouseEvent,
-      ) {
-        const target =
-          event.target;
-
-        if (
-          target instanceof Element &&
-          target.closest(
-            '[data-assessment-actions-menu]',
-          )
-        ) {
-          return;
-        }
-
-        setOpenAssessmentMenuId(
-          null,
-        );
-      }
-
-      function handleKeyDown(
-        event: KeyboardEvent,
-      ) {
-        if (
-          event.key ===
-          'Escape'
-        ) {
-          setOpenAssessmentMenuId(
-            null,
-          );
-        }
-      }
-
-      document.addEventListener(
-        'mousedown',
-        handlePointerDown,
-      );
-
-      document.addEventListener(
-        'keydown',
-        handleKeyDown,
-      );
-
-      return () => {
-        document.removeEventListener(
-          'mousedown',
-          handlePointerDown,
-        );
-
-        document.removeEventListener(
-          'keydown',
-          handleKeyDown,
-        );
-      };
-    },
-    [
-      openAssessmentMenuId,
-    ],
-  );
   
   const sortedAssessments =
     useMemo(
@@ -1643,289 +1573,6 @@ export function AnthropometricAssessmentComparisonPanel({
   ) {
     return null;
   }
-
-  function renderTable(
-    visibleAssessments:
-      AnthropometricAssessment[],
-    expanded:
-      boolean,
-  ) {
-    const groupedSections:
-      MetricSection[] = [
-        'BASIC',
-        'BODY_COMPOSITION',
-        'TRUNK',
-        'UPPER_LIMBS',
-        'LOWER_LIMBS',
-      ];
-
-    return (
-      <div className="overflow-x-auto rounded-lg border bg-background">
-        <table
-          className={
-            expanded
-              ? 'w-max min-w-full text-sm'
-              : 'w-full min-w-[820px] text-sm'
-          }
-        >
-          <thead>
-            <tr className="border-b bg-muted/30">
-              <th className="sticky left-0 z-10 min-w-[220px] bg-muted/30 px-4 py-1.5 text-left font-medium">
-                Indicador
-              </th>
-
-              {visibleAssessments.map(
-                (
-                  assessment,
-                ) => (
-                  <th
-                    key={
-                      assessment.id
-                    }
-                    className="min-w-[145px] px-4 py-1 text-right font-medium"
-                  >
-                    <div className="flex items-center justify-end gap-1.5">
-                      {expanded ? (
-                        <button
-                          type="button"
-                          className="rounded-sm font-medium text-foreground underline-offset-4 transition-colors hover:text-teal-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/50"
-                          onClick={() => {
-                            setOpenAssessmentMenuId(
-                              null,
-                            );
-
-                            setSelectedAssessmentId(
-                              assessment.id,
-                            );
-                          }}
-                          title="Visualizar avaliação"
-                          aria-label={`Visualizar avaliação de ${formatDate(
-                            assessment.measuredAt,
-                          )}`}
-                        >
-                          {formatDate(
-                            assessment.measuredAt,
-                          )}
-                        </button>
-                      ) : (
-                        <span>
-                          {formatDate(
-                            assessment.measuredAt,
-                          )}
-                        </span>
-                      )}
-
-                      {expanded && (
-                        <div
-                          className="relative"
-                          data-assessment-actions-menu
-                        >
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className={[
-                              'size-7 rounded-md border border-teal-200 text-teal-700 transition-colors',
-                              'hover:bg-teal-50 hover:text-teal-800',
-                              openAssessmentMenuId ===
-                              assessment.id
-                                ? 'bg-teal-100 text-teal-900'
-                                : 'bg-teal-50/70',
-                            ].join(
-                              ' ',
-                            )}
-                            onClick={() =>
-                              setOpenAssessmentMenuId(
-                                (
-                                  current,
-                                ) =>
-                                  current ===
-                                  assessment.id
-                                    ? null
-                                    : assessment.id,
-                              )
-                            }
-                            aria-label={`Abrir ações da avaliação de ${formatDate(
-                              assessment.measuredAt,
-                            )}`}
-                            aria-haspopup="menu"
-                            aria-expanded={
-                              openAssessmentMenuId ===
-                              assessment.id
-                            }
-                            title="Ações da avaliação"
-                          >
-                            <MoreVertical className="size-4" />
-                          </Button>
-
-                          {openAssessmentMenuId ===
-                            assessment.id && (
-                            <div
-                              role="menu"
-                              aria-label={`Ações da avaliação de ${formatDate(
-                                assessment.measuredAt,
-                              )}`}
-                              className="absolute right-0 top-full z-50 mt-1 w-40 overflow-hidden rounded-lg border bg-popover p-1 text-popover-foreground shadow-md"
-                            >
-                              <button
-                                type="button"
-                                role="menuitem"
-                                className="flex w-full items-center rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-muted focus:bg-muted focus:outline-none"
-                                onClick={() => {
-                                  setOpenAssessmentMenuId(
-                                    null,
-                                  );
-
-                                  onEditAssessment(
-                                    assessment,
-                                  );
-                                }}
-                              >
-                                Editar avaliação
-                              </button>
-
-                              <button
-                                type="button"
-                                role="menuitem"
-                                className="flex w-full items-center rounded-md px-3 py-2 text-left text-sm text-destructive transition-colors hover:bg-destructive/10 focus:bg-destructive/10 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                                disabled={
-                                  isDeletingAssessment
-                                }
-                                onClick={() => {
-                                  setOpenAssessmentMenuId(
-                                    null,
-                                  );
-
-                                  onDeleteAssessment(
-                                    assessment,
-                                  );
-                                }}
-                              >
-                                Excluir avaliação
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </th>
-                ),
-              )}
-
-              <th className="min-w-[130px] px-4 py-1 text-right font-medium">
-                Evolução
-              </th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {groupedSections.map(
-              (
-                section,
-              ) => {
-                const sectionMetrics =
-                  metrics.filter(
-                    (
-                      metric,
-                    ) =>
-                      metric.section ===
-                      section,
-                  );
-
-                return (
-                  <Fragment
-                    key={section}
-                  >
-                    <tr
-                      className="border-b bg-muted/20"
-                    >
-                      <td
-                        colSpan={
-                          visibleAssessments.length +
-                          2
-                        }
-                        className="px-4 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-                      >
-                        {
-                          sectionLabels[
-                            section
-                          ]
-                        }
-                      </td>
-                    </tr>
-
-                    {sectionMetrics.map(
-                      (
-                        metric,
-                      ) => {
-                        const values =
-                          visibleAssessments.map(
-                            (
-                              assessment,
-                            ) =>
-                              metric.getValue(
-                                assessment,
-                                resultsByAssessmentId.get(
-                                  assessment.id,
-                                ),
-                              ),
-                          );
-
-                        return (
-                          <tr
-                            key={
-                              metric.key
-                            }
-                            className="border-b last:border-b-0"
-                          >
-                            <td className="sticky left-0 z-[5] bg-background px-4 py-1 text-muted-foreground">
-                              {
-                                metric.label
-                              }
-                            </td>
-
-                            {values.map(
-                              (
-                                value,
-                                index,
-                              ) => (
-                                <td
-                                  key={
-                                    visibleAssessments[
-                                      index
-                                    ].id
-                                  }
-                                  className="px-4 py-1 text-right font-medium"
-                                >
-                                  {formatValue(
-                                    value,
-                                    metric.unit,
-                                  )}
-                                </td>
-                              ),
-                            )}
-
-                            <td className="px-4 py-1 text-right font-medium">
-                              {formatEvolution(
-                                values,
-                                metric.deltaUnit ??
-                                  metric.unit,
-                              )}
-                            </td>
-                          </tr>
-                        );
-                      },
-                    )}
-                  </Fragment>
-                );
-              },
-            )}
-          </tbody>
-        </table>
-      </div>
-    );
-  }
-
 
   function renderPrintTable() {
     const groupedSections:
@@ -2205,10 +1852,29 @@ export function AnthropometricAssessmentComparisonPanel({
           </p>
         )}
 
-        {renderTable(
-          compactAssessments,
-          false,
-        )}
+        <AnthropometricHistoryTable
+          assessments={
+            compactAssessments
+          }
+          resultsByAssessmentId={
+            resultsByAssessmentId
+          }
+          metrics={
+            metrics
+          }
+          expanded={
+            false
+          }
+          isDeletingAssessment={
+            isDeletingAssessment
+          }
+          onEditAssessment={
+            onEditAssessment
+          }
+          onDeleteAssessment={
+            onDeleteAssessment
+          }
+        />
 
         <p className="text-[11px] text-muted-foreground">
           A coluna Evolução considera a primeira e a última medição disponível do indicador dentro do período exibido. Traço indica dado não registrado.
@@ -2250,10 +1916,6 @@ export function AnthropometricAssessmentComparisonPanel({
                   variant="ghost"
                   size="icon"
                   onClick={() => {
-                    setOpenAssessmentMenuId(
-                      null,
-                    );
-
                     setSelectedAssessmentId(
                       null,
                     );
@@ -2294,10 +1956,36 @@ export function AnthropometricAssessmentComparisonPanel({
                     </p>
                   </div>
 
-                  {renderTable(
-                    sortedAssessments,
-                    true,
-                  )}
+                  <AnthropometricHistoryTable
+                    assessments={
+                      sortedAssessments
+                    }
+                    resultsByAssessmentId={
+                      resultsByAssessmentId
+                    }
+                    metrics={
+                      metrics
+                    }
+                    expanded={
+                      true
+                    }
+                    isDeletingAssessment={
+                      isDeletingAssessment
+                    }
+                    onOpenAssessment={(
+                      assessment,
+                    ) =>
+                      setSelectedAssessmentId(
+                        assessment.id,
+                      )
+                    }
+                    onEditAssessment={
+                      onEditAssessment
+                    }
+                    onDeleteAssessment={
+                      onDeleteAssessment
+                    }
+                  />
                 </div>
 
                 <p className="text-xs text-muted-foreground">
