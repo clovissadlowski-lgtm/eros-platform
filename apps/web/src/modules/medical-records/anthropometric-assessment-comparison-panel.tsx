@@ -32,7 +32,6 @@ import {
 } from './hooks/use-anthropometric-assessments-results';
 
 import {
-  buildAnthropometricLongitudinalInsights,
   getCalculationValue,
   getCircumferenceValue,
 } from './anthropometry/anthropometric-engine';
@@ -40,6 +39,10 @@ import {
 import {
   AnthropometricInterpretationPanel,
 } from './anthropometry/anthropometric-interpretation-panel';
+
+import {
+  AnthropometricLongitudinalPanel,
+} from './anthropometry/anthropometric-longitudinal-panel';
 
 import type {
   AnthropometricAssessment,
@@ -1612,28 +1615,6 @@ export function AnthropometricAssessmentComparisonPanel({
       -3,
     );
 
-  const longitudinalInsights =
-    useMemo(
-      () =>
-        buildAnthropometricLongitudinalInsights(
-          sortedAssessments.map(
-            (
-              assessment,
-            ) => ({
-              assessment,
-              results:
-                resultsByAssessmentId.get(
-                  assessment.id,
-                ),
-            }),
-          ),
-        ),
-      [
-        sortedAssessments,
-        resultsByAssessmentId,
-      ],
-    );
-
   const hasLoadingResults =
     resultsEntries.some(
       (
@@ -2290,101 +2271,17 @@ export function AnthropometricAssessmentComparisonPanel({
 
             <div className="min-h-0 flex-1 overflow-auto p-6">
               <div className="mx-auto max-w-none space-y-4">
-                {sortedAssessments.length >=
-                  3 && (
-                  <section className="rounded-xl border border-teal-100 bg-teal-50/30 p-5">
-                    <div className="mb-4">
-                      <p className="text-xs font-medium uppercase tracking-wide text-teal-700">
-                        Leitura longitudinal Higeia
-                      </p>
-
-                      <h3 className="mt-1 font-medium">
-                        Trajetória antropométrica
-                      </h3>
-
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Síntese das avaliações ao longo do tempo, respeitando qualidade dos dados e comparabilidade metodológica.
-                      </p>
-                    </div>
-
-                    {hasLoadingResults ? (
-                      <p className="text-sm text-muted-foreground">
-                        Atualizando a leitura longitudinal...
-                      </p>
-                    ) : longitudinalInsights.length >
-                      0 ? (
-                      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                        {longitudinalInsights.map(
-                          (
-                            insight,
-                          ) => {
-                            const isDataLimit =
-                              insight.code.includes(
-                                'LIMIT',
-                              );
-
-                            return (
-                              <div
-                                key={
-                                  insight.code
-                                }
-                                className={
-                                  isDataLimit
-                                    ? 'rounded-lg border border-amber-200 bg-amber-50/70 p-4'
-                                    : 'rounded-lg border bg-background p-4'
-                                }
-                              >
-                                <p
-                                  className={
-                                    isDataLimit
-                                      ? 'text-xs font-medium text-amber-800'
-                                      : 'text-xs text-muted-foreground'
-                                  }
-                                >
-                                  {
-                                    insight.label
-                                  }
-                                </p>
-
-                                <p
-                                  className={
-                                    isDataLimit
-                                      ? 'mt-1 font-medium text-amber-950'
-                                      : 'mt-1 font-medium'
-                                  }
-                                >
-                                  {
-                                    insight.value
-                                  }
-                                </p>
-
-                                <p
-                                  className={
-                                    isDataLimit
-                                      ? 'mt-2 text-xs leading-relaxed text-amber-900/75'
-                                      : 'mt-2 text-xs leading-relaxed text-muted-foreground'
-                                  }
-                                >
-                                  {
-                                    insight.description
-                                  }
-                                </p>
-                              </div>
-                            );
-                          },
-                        )}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">
-                        Ainda não há uma série com dados suficientes para gerar uma leitura longitudinal.
-                      </p>
-                    )}
-
-                    <p className="mt-4 text-[11px] text-muted-foreground">
-                      A leitura longitudinal descreve padrões registrados no prontuário e não atribui causa clínica às mudanças observadas.
-                    </p>
-                  </section>
-                )}
+                <AnthropometricLongitudinalPanel
+                  assessments={
+                    sortedAssessments
+                  }
+                  resultsByAssessmentId={
+                    resultsByAssessmentId
+                  }
+                  isLoading={
+                    hasLoadingResults
+                  }
+                />
 
                 <div className="rounded-xl border bg-background p-4">
                   <div className="mb-4">
